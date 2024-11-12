@@ -1,25 +1,4 @@
 # DEADLINE: 5/12 23:00
-<p>Time left: <span id="countdown"></span></p>
-
-<script>
-const deadline = new Date("2024-12-05T23:00:00");
-function updateCountdown() {
-    const now = new Date();
-    const timeLeft = deadline - now;
-
-    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-
-    document.getElementById("countdown").innerText = 
-        `${days}d ${hours}h ${minutes}m ${seconds}s`;
-    if (timeLeft < 0) {
-        document.getElementById("countdown").innerText = "Deadline passed!";
-    }
-}
-setInterval(updateCountdown, 1000);
-</script>
 
 Group 47
 | Name      | ID      |
