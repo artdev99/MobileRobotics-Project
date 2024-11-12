@@ -1,10 +1,13 @@
 # Project T-47
-<span style="color: red"> DEADLINE: 5/12 23:00 </span>
 
-Martin 340936
-Laetitia XXXXXX
-Arthur 300443
-Amandine XXXXXX
+| Name      | ID      |
+|-----------|---------|
+| Martin    | 340936  |
+| Laetitia  | XXXXXX  |
+| Arthur    | 300443  |
+| Amandine  | XXXXXX  |
+
+**DEADLINE: 5/12 23:00**
 
 ## Deliverables
 A Jupyter notebook which serves as a report. This must contain the information regarding :
