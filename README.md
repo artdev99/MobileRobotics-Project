@@ -1,7 +1,7 @@
 # DEADLINE: 5/12 23:00
 
 Group 47
-| Name      | ID      |
+| Name      | Sciper      |
 |-----------|---------|
 | Martin    | 340936  |
 | Laetitia  | XXXXXX  |
