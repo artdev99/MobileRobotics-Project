@@ -1,28 +1,10 @@
 # Project T-47
-<span style="color:red">## DEADLINE 5/12 23:00</span>
+<span style="color: red"> DEADLINE: 5/12 23:00 </span>
 
-Martin 
-Laetitia
-Arthur
-Amandine
-
-
-## Ideas
-
-- Dynamic obstacles (thymio)
-- Dynamic goal (thymio in known zone or trajectory)
-
-- Recover a (sleeping/moving) thymio
-- make it follow the lead thymio either with communication (ir or wifi) or just using proximity sensors (assuming no obstacles on the way back)
-- check if someone has lego to do some tasks
-
-## TODO
-- define env
-- define global obstacles
-- define local obstacles
-
-
-- chose algo to implement
+Martin 340936
+Laetitia XXXXXX
+Arthur 300443
+Amandine XXXXXX
 
 ## Deliverables
 A Jupyter notebook which serves as a report. This must contain the information regarding :
