@@ -19,3 +19,6 @@ Amandine
 - define env
 - define global obstacles
 - define local obstacles
+
+
+- chose algo to implement
