@@ -14,12 +14,17 @@ Obstacles : Camera pour les obstacles fixes, capteurs de prox pour les obstacles
 
 Tester en cachant la camera
 
-Taches :
-- Mapping à partir de la caméra + Localisation du robot
-- Kalman filter
+Tâches :
+- Mapping à partir de la caméra + Localisation du robot (Martin et Arthur)
+- Kalman filter (Laetitia ?)
 (- A*)
-- Astolfi (contrôle)
-- Visualisation
+- Astolfi (contrôle) (Amandine)
+(- Visualisation)
+- Local avoidance 
 
 Projet en asynchronous programming !!!!
 Code en python
+
+Si on a le temps :
+Obstacle avoidance dans une impasse
+
