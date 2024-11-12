@@ -1,6 +1,6 @@
-# MobileRobotics-Project T-47
+# Project T-47
 
-Martin
+Martin 
 Laetitia
 Arthur
 Amandine
