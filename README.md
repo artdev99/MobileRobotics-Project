@@ -11,7 +11,7 @@ If you use chatgpt, it's ok for prototyping, but for security **final code shoul
   - goal (end position)
 - Plan to the goal using A*
 - Kalman on motor speed + grid for precize localization of the robot
-- Asolfi controler $(x,y,\theta)$ for the movement
+- Astolfi controler $(x,y,\theta)$ for the movement
 - local avoidance (+ handle grid/map updates)
 
 ## TODO 🔨
