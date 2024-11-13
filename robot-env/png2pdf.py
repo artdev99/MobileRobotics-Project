@@ -3,21 +3,27 @@
 import img2pdf # pip install img2pdf
 from PIL import Image 
 import os
-import io
+import glob
 
-name = "s1" # MODIFY NAME
+name = "r1" # MODIFY NAME
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
-img_path = os.path.join(script_dir, f"{name}.png")
+file_matches = glob.glob(os.path.join(script_dir, f"{name}.*"))
+img_path = None
+for file in file_matches:
+    if file.lower().endswith(("jpg", "png")):
+        img_path = file
+        break
 pdf_path = os.path.join(script_dir, f"{name}.pdf")
 
 try:
     image = Image.open(img_path)
-    if image.mode in ('RGBA', 'LA') or (image.mode == 'P' and 'transparency' in image.info):
+    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
         bg = Image.new("RGB", image.size, (255, 255, 255))
         bg.paste(image, mask=image.split()[-1])
         image.close()
         temp_img_path = os.path.join(script_dir, "temp_image.png")
-        bg.save(temp_img_path, format='PNG')
+        bg.save(temp_img_path, format="PNG")
         bg.close()
         image = Image.open(temp_img_path)
         pdf_bytes = img2pdf.convert(image.filename)

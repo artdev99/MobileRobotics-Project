@@ -30,5 +30,6 @@ Using delay shape is a good approx for thymio robot: <br>
 ![Approx](https://i.postimg.cc/bw3hj8wb/image-2024-11-13-100740839.png)
 
 # File name convention
-- `rx.png` where no robot is present, real life purposes
-- `sx.png` where robot is present, simulation purposes
+- `rx.*` robot present, real life purposes
+- `snx.*` where no robot is present, simulation purposes
+- `srx.*` where robot is present, simulation purposes
