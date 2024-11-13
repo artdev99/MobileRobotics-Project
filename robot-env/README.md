@@ -1,3 +1,11 @@
+# To create envs
+1. open [draw.io](https://app.diagrams.net/)
+2. Load locally `robot-env.draw.io`
+3. Modify
+4. Saves As > Type PNG > Where Download (to save the png)
+5. Optionally you can also save the XML `.drawio`, if you want to create a new scene and use it as a base
+6. For print purposes you can convert the `png` to `pdf` using online solutions like [pdf24](https://tools.pdf24.org/en/png-to-pdf) or run `png2pdf.py` (requires `PIL` and `img2pdf`)
+    
 # Color code
 - Background: black
 - global obstacles: red
