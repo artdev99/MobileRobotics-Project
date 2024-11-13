@@ -18,7 +18,7 @@ Page format: A3
     - Arange Menu
     - Size 36mm 36mm
 
-Using delay shape is a good approx for thymio robot:
+Using delay shape is a good approx for thymio robot: <br>
 ![Approx](https://i.postimg.cc/bw3hj8wb/image-2024-11-13-100740839.png)
 
 # File name convention
