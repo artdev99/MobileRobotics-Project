@@ -35,7 +35,7 @@ Code in Pythin using async programming (no `%%run_python` or `%%run_aseba`)
 - kidnapping (global localization)
 - add a second thymio (dynamic local obstacle, dynamic goal $\rightarrow$ D*)
 
-## Deliverables
+## Deliverables 📩
 A **Jupyter notebook** which serves as a report. This must contain the information regarding :
 - The **members of the group**, it’s helpful to know who you are when we go over the report.
 - An **introduction to your environment** and to the **choices you made**.
