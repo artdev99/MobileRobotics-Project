@@ -1,6 +1,22 @@
-# DEADLINE: 5/12 23:00
+# DEADLINE: 5/12 23:00 🎯
 
-Group 47
+# MONDADA GOLDEN RULE: NO PLAGIARISM (or we all get fcked) 😐
+They have a database of all the previous projects. They will compare our work to the databate, if there is a match, it's over 💀
+If you use chatgpt, it's ok for prototyping, but for security **final code should be fully rewritten by us !!!**
+
+***
+# GOAL: REPRODUCE THE "FIND BEER" Project 🍺
+- Using camera: create grid of env and detect:
+  - robot (start position)
+  - global obstacles
+  - goal (end position)
+- Plan to the goal using A*
+- Kalman on motor speed + grid for precize localization of the robot
+- Asolfi controler $(x,y,\theta)$ for the movement
+- local avoidance (+ handle grid/map updates)
+
+
+Group 47🤺
 | Name      | Sciper      |
 |-----------|---------|
 | Martin    | 340936  |
@@ -27,7 +43,7 @@ Code in Pythin using async programming (no `%%run_python` or `%%run_aseba`)
 ### To lose time
 - impossible escape (local avoidance)
 - kidnapping (global localization)
-- add a second thymio
+- add a second thymio (dynamic local obstacle, dynamic goal $\rightarrow$ D*)
 
 ## Deliverables
 A **Jupyter notebook** which serves as a report. This must contain the information regarding :
