@@ -24,7 +24,7 @@ def show_cv2_image(img: np.ndarray, fig_size=(12,12), color="RGB", _axis=True, _
     plt.show()
 
 
-def show_distortion(image: np.ndarray, epsilon_max=0.003, circle_size=10, border_size=3):
+def show_distortion(image: np.ndarray, sigma_init=5, epsilon_int=0.0025, epsilon_max=0.003, circle_size=10, border_size=3):
     def update(sigma, epsilon):
         edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
         mask = largest_cc(edges)
@@ -57,11 +57,11 @@ def show_distortion(image: np.ndarray, epsilon_max=0.003, circle_size=10, border
     
     interact(
         update, 
-        sigma=FloatSlider(value=5, min=1, max=10, step=0.1, description='Sigma', readout_format='.2f'),
-        epsilon=FloatSlider(value=0.0025, min=0.0001, max=epsilon_max, step=0.0001, description='Epsilon', readout_format='.4f')
+        sigma=FloatSlider(value=sigma_init, min=1, max=10, step=0.1, description='Sigma', readout_format='.2f'),
+        epsilon=FloatSlider(value=epsilon_int, min=0.0001, max=epsilon_max, step=0.0001, description='Epsilon', readout_format='.4f')
     )
 
-def show_thresholds(image: np.ndarray):
+def show_thresholds(image: np.ndarray, T_WL_init=190, T_RH_init=140, T_RL_init=120, T_GH_init=140, T_GL_init=120, min_size_init=1000):
     height, width, _ = image.shape
     
     def update(T_WL, T_RH, T_RL, T_GH, T_GL, min_size, x_coord):
@@ -165,12 +165,12 @@ def show_thresholds(image: np.ndarray):
     
     interact(
         update, 
-        T_WL=IntSlider(value=190, min=0, max=255, step=1, description='T_WL'),
-        T_RH=IntSlider(value=140, min=0, max=255, step=1, description='T_RH'),
-        T_RL=IntSlider(value=120, min=0, max=255, step=1, description='T_RL'),
-        T_GH=IntSlider(value=140, min=0, max=255, step=1, description='T_GH'),
-        T_GL=IntSlider(value=120, min=0, max=255, step=1, description='T_GL'),
-        min_size=IntSlider(value=1000, min=1, max=3000, step=100, description='Min Size'),
+        T_WL=IntSlider(value=T_WL_init, min=0, max=255, step=1, description='T_WL'),
+        T_RH=IntSlider(value=T_RH_init, min=0, max=255, step=1, description='T_RH'),
+        T_RL=IntSlider(value=T_RL_init, min=0, max=255, step=1, description='T_RL'),
+        T_GH=IntSlider(value=T_GH_init, min=0, max=255, step=1, description='T_GH'),
+        T_GL=IntSlider(value=T_GL_init, min=0, max=255, step=1, description='T_GL'),
+        min_size=IntSlider(value=min_size_init, min=1, max=3000, step=100, description='Min Size'),
         x_coord=IntSlider(value=width // 2, min=0, max=width - 1, step=1, description='X Coord')
     )
 
@@ -217,7 +217,7 @@ def show_grid(grid: np.ndarray, fig_size=(6,6), c_obs=None, c_robot=None, c_goal
     plt.show()
 
 
-def show_nose(image:np.array):
+def show_nose(image:np.array, sigma_init=5, threshold_init=50, minLineLength_init=20, maxLineGap_init=50, circleSize_init=10):
     def update(sigma, threshold, minLineLength, maxLineGap, circleSize):
         img = image.copy()
 
@@ -290,11 +290,11 @@ def show_nose(image:np.array):
 
     interact(
         update,
-        sigma=FloatSlider(value=5, min=1, max=10, step=0.1, description='Sigma', readout_format='.2f'),
-        threshold=IntSlider(value=50, min=1, max=200, step=1, description='Threshold'),
-        minLineLength=IntSlider(value=20, min=1, max=200, step=1, description='Min Line Length'),
-        maxLineGap=IntSlider(value=50, min=1, max=200, step=1, description='Max Line Gap'),
-        circleSize=IntSlider(value=5, min=1, max=10, step=1, description='Circle Size')
+        sigma=FloatSlider(value=sigma_init, min=1, max=10, step=0.1, description='Sigma', readout_format='.2f'),
+        threshold=IntSlider(value=threshold_init, min=1, max=200, step=1, description='Threshold'),
+        minLineLength=IntSlider(value=minLineLength_init, min=1, max=200, step=1, description='Min Line Length'),
+        maxLineGap=IntSlider(value=maxLineGap_init, min=1, max=200, step=1, description='Max Line Gap'),
+        circleSize=IntSlider(value=circleSize_init, min=1, max=10, step=1, description='Circle Size')
     )
 
 # image threshold=100, minLineLength=120, maxLineGap=200

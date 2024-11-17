@@ -379,8 +379,8 @@ def get_slope_intercept(point1, point2):
     intercept = point1[1] - slope * point1[0]
     return slope, intercept
 
-def get_nose(image:np.array, sigma=5):
-    curve, bp1, bp2 = find_nose_corners(image, sigma=sigma)
+def get_nose(image:np.array, sigma=5, threshold=25, minLineLength=20, maxLineGap=50):
+    curve, bp1, bp2 = find_nose_corners(image, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
     mid = get_midpoint(bp1, bp2)
     centroid = get_centroids(image, [255,255,255])
     slope, intercept = get_slope_intercept(mid, centroid.flatten())
