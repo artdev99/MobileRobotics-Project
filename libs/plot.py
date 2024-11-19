@@ -24,7 +24,7 @@ def show_cv2_image(img: np.ndarray, fig_size=(12,12), color="RGB", _axis=True, _
     plt.show()
 
 
-def show_distortion(image: np.ndarray, sigma_init=5, epsilon_int=0.0025, epsilon_max=0.003, circle_size=10, border_size=3):
+def show_perspective(image: np.ndarray, sigma_init=5, epsilon_int=0.0025, epsilon_max=0.003, circle_size=10, border_size=3):
     def update(sigma, epsilon):
         edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
         mask = largest_cc(edges)

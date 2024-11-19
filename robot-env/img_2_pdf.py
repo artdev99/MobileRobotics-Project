@@ -1,11 +1,11 @@
 # https://www.geeksforgeeks.org/python-convert-image-to-pdf-using-img2pdf-module/
 # https://stackoverflow.com/questions/35859140/remove-transparency-alpha-from-any-image-using-pil
-import img2pdf # pip install img2pdf
+import img2pdf
 from PIL import Image 
 import os
 import glob
 
-name = "r1" # MODIFY NAME
+name = "bottom-right" # MODIFY NAME
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 file_matches = glob.glob(os.path.join(script_dir, f"{name}.*"))

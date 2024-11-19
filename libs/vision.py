@@ -3,13 +3,33 @@ import numpy as np
 from skimage import feature, measure
 from scipy.spatial import distance
 import os
+from heapq import heappush, heappop
 
 def get_image_from_camera(cam):
     ret, frame = cam.read()
     if not ret:
         print("Failed to capture image")
         return None
-    return frame
+    img = correct_camera_perspective(frame)
+    return img
+
+def correct_camera_perspective(img):
+    try:
+        mtx = np.load("camera_matrix.npy")
+        dist = np.load("distortion_coefficients.npy")
+    except FileNotFoundError:
+        print("Calibration files not found.")
+        exit()
+
+    h,  w = img.shape[:2]
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 0, (w,h))
+    
+    dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+    # crop the image borders
+    x, y, w, h = roi
+    dst = dst[y:y+h, x:x+w]
+
+    return dst
 
 def get_image_from_file(image_path: str)-> np.ndarray:
     """
@@ -93,7 +113,7 @@ def compute_destination_size(ordered_corners):
 
     return max_width, max_height
 
-def correct_distortion(image: np.ndarray, sigma=5, epsilon=0.01, eps_security=True, verbose=False) -> np.ndarray:
+def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01, eps_security=True, verbose=False) -> np.ndarray:
     edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
     mask = largest_cc(edges)
     corners = find_corners(mask, epsilon=epsilon, eps_security=eps_security, verbose=verbose)
@@ -110,8 +130,6 @@ def correct_distortion(image: np.ndarray, sigma=5, epsilon=0.01, eps_security=Tr
 
 
 ##################################################################################################
-
-
 def threshold_colors(image: np.ndarray, T_WL: int, T_RH: int, T_RL: int, T_GH: int, T_GL: int) -> np.ndarray:
     thresholded_img = np.zeros_like(image)
     
@@ -388,3 +406,108 @@ def get_orientation(nose, centroid):
     theta_degrees = np.degrees(theta)
     
     return theta, theta_degrees
+
+##################################################################################################
+
+def heuristic(a, b):
+    #Euclidian Distance
+    return np.linalg.norm(a-b,2)
+
+def a_star_search(map_grid, start, goal):
+    #Initialize the open set as a priority queue and add the start node
+    open_set = []
+    heappush(open_set,(0+heuristic(start,goal),0,start))
+    
+    came_from = {}
+    g_costs = {start: 0}
+    explored = set()
+    cost_map=-1*np.zeros_like(map_grid)
+
+    while open_set:  # While the open set is not empty
+
+        current_f_cost, current_g_cost, current_pos = heappop(open_set)
+        # Add the current node to the explored set
+        explored.add(current_pos)
+
+        # Check if the goal has been reached
+        if current_pos == goal:
+             break
+        # Get the neighbors of the current node 8 neighbors
+        neighbors = [(current_pos[0],current_pos[1]+1),
+                     (current_pos[0],current_pos[1]-1),
+                     (current_pos[0]-1,current_pos[1]),
+                     (current_pos[0]+1,current_pos[1]),
+                     (current_pos[0]+1,current_pos[1]+1),
+                     (current_pos[0]-1,current_pos[1]-1),
+                     (current_pos[0]-1,current_pos[1]+1),
+                     (current_pos[0]+1,current_pos[1]-1),
+
+            ]
+    
+        for neighbor in neighbors:
+            # Check if neighbor is within bounds and not an obstacle
+            if (0 <= neighbor[0] < map_grid.shape[0]) and (0 <= neighbor[1] < map_grid.shape[1]) and (map_grid[neighbor]!=-1):
+                
+                # Calculate tentative_g_cost
+                tentative_g_cost = g_costs[current_pos]+(map_grid[neighbor]) #cost is 1 y default on the map_grid
+
+                # If this path to neighbor is better than any previous one
+                if neighbor not in g_costs or tentative_g_cost < g_costs[neighbor]:
+                    # Update came_from and g_costs
+                    came_from[neighbor] = current_pos
+                    g_costs[neighbor] = tentative_g_cost
+                    f_cost=tentative_g_cost+heuristic(neighbor,goal)
+                    cost_map[neighbor]=f_cost
+                    # Add neighbor to open set
+                    heappush(open_set, (f_cost,tentative_g_cost,neighbor))
+    
+    # Reconstruct path
+    if current_pos == goal:
+        #Reconstruct the path
+        path=[goal]
+        while path[-1]!=start:
+            path.append(came_from[path[-1]])
+        print(path)
+        return path[::-1], explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
+    else:
+        return None, explored
+    
+##################################################################################################
+
+def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140, T_GL=120, min_size=5000, grid_size=200,
+         threshold=25, minLineLength=20, maxLineGap=50):
+    
+    image = get_image_from_camera(cam) # camera calibration inside
+
+    image = correct_perspective(image, sigma=sigma, epsilon=epsilon)
+
+    image = threshold_image(image, T_WL, T_RH, T_RL, T_GH, T_GL, min_size)
+
+    grid = get_grid(image, grid_size, verbose=True, full_output=False)
+
+    grid_image = grid_to_image(grid)
+
+    nose = get_nose(grid_image, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
+
+    c_obstacles = get_centroids(grid, "obstacle")
+    c_robot = get_centroids(grid, "start")
+    c_goal = get_centroids(grid, "goal")
+
+    c_robot = c_robot.flatten()
+    c_goal = c_goal.flatten()
+    angle_rad, angle_deg = get_orientation(nose, c_robot)
+
+    a_search_output = a_star_search(grid, c_robot, c_goal)
+
+    return grid, c_robot, c_goal, c_obstacles, angle_rad, angle_deg, a_search_output
+
+def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140, T_GL=120, min_size=5000, grid_size=200,
+         threshold=25, minLineLength=20, maxLineGap=50):
+    
+    image = get_image_from_camera(cam)
+    
+    image = correct_perspective(image, sigma=sigma, epsilon=epsilon)
+
+    # detection thymio
+    # kalman 
+    # update grid
