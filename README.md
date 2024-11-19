@@ -43,12 +43,6 @@ A **Jupyter notebook** which serves as a report. This must contain the informati
 - A section which is used to **run the overall project** and where we can see the path chosen, where the system believes the robot is along the path before and after filtering etc… This can also be done **in a .py file** if you prefer. Just make sure to reference it in the report so we can easily have a look at it.
 - Conclusion: The code used to execute the overall project. Do not hesitate to **make use of .py files** that you import in the notebook. The whole body of code does not have to be in the Jupyter notebook, on the contrary! Make sure the **code clean and well documented**. Somebody who starts to browse through it should easily understand what you are doing.
 
-## Scenario
-Map = Parc
-Obstacles = arbres verts
-Robot = Chien Milou
-But : Milou retrouve Tintin
-
 Group 47🤺
 | Name      | Sciper      |
 |-----------|---------|
@@ -56,4 +50,12 @@ Group 47🤺
 | Laetitia  | XXXXXX  |
 | Arthur    | 300443  |
 | Amandine  | 344736  |
+
+
+## Scenario
+- Map = Parc
+- Obstacles = arbres verts
+- Robot = Chien Milou
+- But : Milou retrouve Tintin
+
 
