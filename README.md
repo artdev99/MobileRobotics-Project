@@ -18,8 +18,7 @@ If you use chatgpt, it's ok for prototyping, but for security **final code shoul
 Code in Pythin using async programming (no `%%run_python` or `%%run_aseba`)
 
 ### Week 10 :
-- Kalman filter (Leatitia)
-- Odometry using motor speed
+- Kalman filter (Laetitia)
 - Local avoidance
 - A*
 - Live visualization ?
