@@ -29,6 +29,7 @@ Code in Pythin using async programming (no `%%run_python` or `%%run_aseba`)
 - A* / gridsearch
 - Local Avoidance
 - Hide Camera
+- Start button
 
 ### To lose time 🌬️
 - impossible escape (local avoidance)
@@ -56,7 +57,8 @@ Group 47🤺
 - Map = Parc
 - Obstacles = arbres verts
 - Robot = Chien Milou
-- But : Milou retrouve Tintin
+- But : Milou retrouve Tintin, ramène un baton
+- Début : On "pose un baton sur le thymio" (faire un baton en papier ou autre) -> on appuie sur le bouton start
 - Obstacles globaux : arbre, eau, bancs
 - Obstacles locaux : d'autres chiens ?
 
@@ -68,6 +70,7 @@ Group 47🤺
 - Fond : Sol d'une salle/d'un couloir (elec)
 - 3x3 feuilles A3
 - Goal : Carré coloré + playmobil ?
+- Baton : baton imprimé en 2D qu'on scotch sur le thymio au début ?
 
 - ATTENTION A LA LUMINOSITE / AUX REFLETS
 
