@@ -4,37 +4,12 @@ from skimage import feature, measure
 from scipy.spatial import distance
 import os
 
-def camera(): 
-    cam = cv2.VideoCapture(1, cv2.CAP_DSHOW) #Specify DirectShow for faster connection
-    if not cam.isOpened(): 
-        print("Camera could not be opened") 
-        cam.release()
-        exit()
-
-    #Create folder for the Calibration Images
-    folder_name = "Chessboard_Calib_imgs"
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-    img_count=0
-    while img_count<20:
-        ret, frame = cam.read()
-        if not ret:
-            print("Frame could not be read for some reason")
-            cam.release()
-            exit()
-
-        cv2.imshow(f"Take image {img_count+1} by pressing s",frame)
-        
-        if cv2.waitKey(1) & 0xFF == ord('s'):
-            filepath = os.path.join(folder_name, f"Calib_img{img_count}.png")
-            cv2.imwrite(filepath,frame)
-            img_count+=1
-            cv2.destroyAllWindows()
-        
-
-    cv2.destroyAllWindows()
-    cam.release()
+def get_image_from_camera(cam):
+    ret, frame = cam.read()
+    if not ret:
+        print("Failed to capture image")
+        return None
+    return frame
 
 def get_image_from_file(image_path: str)-> np.ndarray:
     """
