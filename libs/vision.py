@@ -497,10 +497,11 @@ def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140,
 
     c_goal = c_goal.flatten()
     #angle_rad, angle_deg = get_orientation(nose, c_robot)
+    Thymio_xytheta=np.vstack(([np.int32(Thymio_x)*grid.shape[0]]/image.shape[0],np.int32(Thymio_y)*grid.shape[1]/image.shape[1]))
+    Thymio_xytheta=np.vstack((Thymio_xytheta,Thymio_theta))
+    a_search_output = a_star_search(grid, Thymio_xytheta[:1], c_goal)
 
-    a_search_output = a_star_search(grid, c_robot, c_goal)
-
-    return grid, c_robot, c_goal, c_obstacles, angle_rad, angle_deg, a_search_output
+    return grid, Thymio_xytheta, c_goal, a_search_output
 
 def Thymio_position(img, T_WL, Thymio_size):
 
