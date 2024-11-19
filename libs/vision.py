@@ -262,7 +262,7 @@ def image_to_grid(grid_image: np.ndarray) -> np.ndarray:
     
     grid[background_mask] = 0
     grid[start_mask] = 1
-    grid[goal_mask] = 2
+    grid[goal_mask] = -2
     grid[obstacle_mask] = -1
     
     return grid
@@ -292,7 +292,7 @@ def get_centroids(grid:np.ndarray, _object):
         "obstacle": -1,
         "start": 1,
         "robot": 1,
-        "goal": 2,
+        "goal": -2,
     }
     
     is_image = len(grid.shape) == 3 and grid.shape[2] == 3
@@ -449,7 +449,7 @@ def a_star_search(map_grid, start, goal):
             if (0 <= neighbor[0] < map_grid.shape[0]) and (0 <= neighbor[1] < map_grid.shape[1]) and (map_grid[neighbor]!=-1):
                 
                 # Calculate tentative_g_cost
-                tentative_g_cost = g_costs[current_pos]+(map_grid[neighbor]) #cost is 1 y default on the map_grid
+                tentative_g_cost = g_costs[current_pos]+(map_grid[neighbor]+1) #cost is 1 y default on the map_grid
 
                 # If this path to neighbor is better than any previous one
                 if neighbor not in g_costs or tentative_g_cost < g_costs[neighbor]:
@@ -487,15 +487,16 @@ def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140,
 
     grid_image = grid_to_image(grid)
 
-    nose = get_nose(grid_image, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
+    Thymio_size=-1
+    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size = Thymio_position(image, T_WL, Thymio_size)
 
-    c_obstacles = get_centroids(grid, "obstacle")
-    c_robot = get_centroids(grid, "start")
+    #nose = get_nose(grid_image, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
+
+    #c_obstacles = get_centroids(grid, "obstacle")
     c_goal = get_centroids(grid, "goal")
 
-    c_robot = c_robot.flatten()
     c_goal = c_goal.flatten()
-    angle_rad, angle_deg = get_orientation(nose, c_robot)
+    #angle_rad, angle_deg = get_orientation(nose, c_robot)
 
     a_search_output = a_star_search(grid, c_robot, c_goal)
 
@@ -511,7 +512,9 @@ def Thymio_position(img, T_WL, Thymio_size):
     cnt, hierarchy = cv2.findContours(filled_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) #or SIMPLE
     cnt = sorted(cnt, key=cv2.contourArea, reverse=True) #sort by largest cnt, there should be only one with small blob removal but we never know :)
 
-    if cv2.contourArea(cnt[0])<Thymio_size*0.75:
+    if Thymio_size<0:
+        cv2.contourArea(cnt[0])
+    elif cv2.contourArea(cnt[0])<Thymio_size*0.75:
         Thymio_x=-1000
         Thymio_y=-1000
         Thymio_theta=0
@@ -543,9 +546,9 @@ def Thymio_position(img, T_WL, Thymio_size):
     
 
 
-    return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected
+    return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size
 
-def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190):
+def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190, Thymio_size=-1):
     
     image = get_image_from_camera(cam)
     
@@ -556,5 +559,5 @@ def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190):
     # Kalman 
     # update grid
     grid(grid==1)=0
-    grid([np.int32(Thymio_x)*grid.shape[0]]/image.shape[0],np.int32(Thymio_y)*grid.shape[1]/image.shape[1])
+    grid([np.int32(Thymio_x)*grid.shape[0]]/image.shape[0],np.int32(Thymio_y)*grid.shape[1]/image.shape[1])=1
     return grid, Thymio_x, Thymio_y, Thymio_theta, Thymio_detected 
