@@ -501,13 +501,60 @@ def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140,
 
     return grid, c_robot, c_goal, c_obstacles, angle_rad, angle_deg, a_search_output
 
-def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140, T_GL=120, min_size=5000, grid_size=200,
-         threshold=25, minLineLength=20, maxLineGap=50):
+def Thymio_position(img, T_WL, Thymio_size):
+
+    white_mask = cv2.inRange(img, np.array([T_WL, T_WL, T_WL]), np.array([255, 255, 255]))
+    kernel_close = np.ones((10, 20), np.uint8)
+    kernel_open = np.ones((10, 10), np.uint8)
+    filled_mask = cv2.morphologyEx(white_mask, cv2.MORPH_CLOSE, kernel_close) #close inside blobs
+    filled_mask = cv2.morphologyEx(filled_mask, cv2.MORPH_OPEN, kernel_open) #remove small blobs
+    cnt, hierarchy = cv2.findContours(filled_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) #or SIMPLE
+    cnt = sorted(cnt, key=cv2.contourArea, reverse=True) #sort by largest cnt, there should be only one with small blob removal but we never know :)
+
+    if cv2.contourArea(cnt[0])<Thymio_size*0.75:
+        Thymio_x=-1000
+        Thymio_y=-1000
+        Thymio_theta=0
+        Thymio_detected=False
+        return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected
+
+    Thymio_mask=np.zeros_like(filled_mask,dtype=np.uint8)
+    cv2.drawContours(Thymio_mask, [cnt[0]], -1, 255, thickness=cv2.FILLED)
+
+    #Get Centroid
+    M = cv2.moments(filled_mask)
+    Thymio_x = int(M["m10"] / M["m00"])
+    Thymio_y = int(M["m01"] / M["m00"])
+
+    #Get orientation 
+    rect = cv2.minAreaRect(cnt[0])
+    box = cv2.boxPoints(rect) #get oriented box vertices
+    box = np.int32(box) #get integer
+
+    #Get direction
+    box_mask=np.zeros_like(Thymio_mask,dtype=np.uint8)
+    cv2.drawContours(box_mask, [box], -1, 255, thickness=cv2.FILLED)
+    intersection= (box_mask & ~Thymio_mask)*255
+    M = cv2.moments(intersection)
+    cX_nose = int(M["m10"] / M["m00"])
+    cY_nose = int(M["m01"] / M["m00"])
+
+    Thymio_theta=np.atan2(cY_nose-Thymio_y,cX_nose-Thymio_x)
+    
+
+
+    return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected
+
+def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190):
     
     image = get_image_from_camera(cam)
     
     image = correct_perspective(image, sigma=sigma, epsilon=epsilon)
 
     # detection thymio
-    # kalman 
+    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected = Thymio_position(image, T_WL, Thymio_size)
+    # Kalman 
     # update grid
+    grid(grid==1)=0
+    grid([np.int32(Thymio_x)*grid.shape[0]]/image.shape[0],np.int32(Thymio_y)*grid.shape[1]/image.shape[1])
+    return grid, Thymio_x, Thymio_y, Thymio_theta, Thymio_detected 
