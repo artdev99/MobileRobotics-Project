@@ -57,7 +57,8 @@ Group 47🤺
 - Obstacles = arbres verts
 - Robot = Chien Milou
 - But : Milou retrouve Tintin
-- Obstacles : arbre, eau, bancs
+- Obstacles globaux : arbre, eau, bancs
+- Obstacles locaux : d'autres chiens ?
 
 ### Mise en place :
 - Bordures : bandes de papier blanc
