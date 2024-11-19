@@ -19,7 +19,7 @@ Code in Pythin using async programming (no `%%run_python` or `%%run_aseba`)
 
 ### Week 10 :
 - Kalman filter (Laetitia)
-- Local avoidance
+- Local avoidance (Amandine)
 - Live visualization (prediction Kalman (grille + graph) + grid mise à jour + plot path + live camera) (live avec par dessus la grille, le Kalman et le path)
 
 ### High Priority
