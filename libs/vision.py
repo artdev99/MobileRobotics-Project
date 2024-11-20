@@ -137,13 +137,13 @@ def threshold_colors(image: np.ndarray, T_WL: int, T_RH: int, T_RL: int, T_GH: i
         return image
 
     red_mask = cv2.inRange(image, (0, 0, T_RL), (T_RH, T_RH, 255))
-    thresholded_img[red_mask > 0] = [0, 0, 255]
+    thresholded_img[red_mask] = [0, 0, 255]
 
     green_mask = cv2.inRange(image, (0, T_GL, 0), (T_GH, 255, T_GH))
-    thresholded_img[green_mask > 0] = [0, 255, 0]
+    thresholded_img[green_mask] = [0, 255, 0]
 
     white_mask = cv2.inRange(image, (T_WL, T_WL, T_WL), (255, 255, 255))
-    thresholded_img[white_mask > 0] = [255, 255, 255]
+    thresholded_img[white_mask] = [255, 255, 255]
 
     return thresholded_img
 
@@ -473,6 +473,11 @@ def a_star_search(map_grid, start, goal):
         return None, explored
     
 ##################################################################################################
+def grid1_coord2grid2_coord(coord,grid1,grid2):
+    coord_grid=coord
+    coord_grid[0]=coord*grid2.shape[0]/grid1.shape[0]
+    coord_grid[1]=coord*grid2.shape[1]/grid1.shape[1]
+    return coord_grid
 
 def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140, T_GL=120, min_size=5000, grid_size=200,
          threshold=25, minLineLength=20, maxLineGap=50):
@@ -481,9 +486,9 @@ def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140,
 
     image = correct_perspective(image, sigma=sigma, epsilon=epsilon)
 
-    image = threshold_image(image, T_WL, T_RH, T_RL, T_GH, T_GL, min_size)
+    image_colored = threshold_image(image, T_WL, T_RH, T_RL, T_GH, T_GL, min_size)
 
-    grid = get_grid(image, grid_size, verbose=True, full_output=False)
+    grid = get_grid(image_colored, grid_size, verbose=True, full_output=False)
 
     grid_image = grid_to_image(grid)
 
@@ -497,9 +502,8 @@ def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140,
 
     c_goal = c_goal.flatten()
     #angle_rad, angle_deg = get_orientation(nose, c_robot)
-    Thymio_xytheta=np.vstack(([np.int32(Thymio_x)*grid.shape[0]]/image.shape[0],np.int32(Thymio_y)*grid.shape[1]/image.shape[1]))
-    Thymio_xytheta=np.vstack((Thymio_xytheta,Thymio_theta))
-    a_search_output = a_star_search(grid, Thymio_xytheta[:1], c_goal)
+    Thymio_xytheta=np.array([[Thymio_x],[Thymio_y],[Thymio_theta]])
+    a_search_output = a_star_search(grid, grid1_coord2grid2_coord(Thymio_xytheta[:1],image,grid), c_goal)
 
     return grid, Thymio_xytheta, c_goal, a_search_output
 
@@ -549,7 +553,7 @@ def Thymio_position(img, T_WL, Thymio_size):
 
     return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size
 
-def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190, Thymio_size=-1):
+def update_vision(cam, sigma = 5, epsilon = 0.01, T_WL=190, Thymio_size=-1):
     
     image = get_image_from_camera(cam)
     
@@ -557,8 +561,5 @@ def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190, Thymio_size=-1
 
     # detection thymio
     Thymio_x, Thymio_y, Thymio_theta, Thymio_detected = Thymio_position(image, T_WL, Thymio_size)
-    # Kalman 
-    # update grid
-    grid(grid==1)=0
-    grid([np.int32(Thymio_x)*grid.shape[0]]/image.shape[0],np.int32(Thymio_y)*grid.shape[1]/image.shape[1])=1
-    return grid, Thymio_x, Thymio_y, Thymio_theta, Thymio_detected 
+
+    return  Thymio_x, Thymio_y, Thymio_theta, Thymio_detected 
