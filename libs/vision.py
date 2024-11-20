@@ -130,24 +130,47 @@ def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01, eps_security=T
 
 
 ##################################################################################################
-def threshold_colors(image: np.ndarray, T_WL: int, T_RH: int, T_RL: int, T_GH: int, T_GL: int) -> np.ndarray:
+def full_detection_cnt(image: np.ndarray, thresh_Thymio, thresh_obstacle, thresh_goal,min_size) -> np.ndarray:
     thresholded_img = np.zeros_like(image)
+
+    ##Find Thymio (start)
+    Thymio_mask = cv2.inRange(image, thresh_Thymio[:2], thresh_Thymio[3:5])
+
+    contours, _ = cv2.findContours(Thymio_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    cnt = contours[0]  # biggest contour
+    filled_mask = np.zeros_like(Thymio_mask)
+    Thymio_mask=cv2.drawContours(filled_mask, cnt, -1, 1, thickness=cv2.FILLED)
+    thresholded_img[Thymio_mask] = [255, 255, 255]
+
+    # Find the minimum enclosing circle
+    (_, _), radius = cv2.minEnclosingCircle(cnt)
+    radius = int(np.ceil(radius))  # Round up to ensure full coverage
+    kernel_size = 2 * radius + 1  # Kernel size must be odd
+    kernel = np.zeros((kernel_size, kernel_size), dtype=np.uint8)
+    cv2.circle(kernel, (radius, radius), radius, 1, thickness=-1)
+
+
+    # Find Obstacles
+    obstacle_mask=255*np.ones_like(image)
+    for i in range(thresh_obstacle.shape[0]):
+        temp_mask = cv2.inRange(image, thresh_obstacle[i,:2], thresh_obstacle[i,3:5])
+        obstacle_mask = cv2.bitwise_and(obstacle_mask, temp_mask)
+    obstacle_mask = filter_small_blobs(obstacle_mask, min_size=min_size)
+    obstacle_cnt, _ = cv2.findContours(obstacle_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    expanded_obstacle_mask = cv2.dilate(obstacle_mask, kernel, iterations=1)
+    obstacle_mask, obstacle_cnt_expnded = fill_holes(expanded_obstacle_mask)
+    thresholded_img[obstacle_mask] = [0, 0, 255]
     
-    if T_WL == 0 and T_RL == 0 and T_RH == 255 and T_GH == 255 and T_GL == 0:
-        return image
+    # Find Goal
+    goal_mask = cv2.inRange(image, thresh_goal[:2], thresh_goal[3:5])
+    goal_mask = filter_small_blobs(goal_mask, min_size=min_size)
+    goal_mask, goal_cnt = fill_holes(goal_mask)
+    thresholded_img[goal_mask] = [0, 255, 0]
 
-    red_mask = cv2.inRange(image, (0, 0, T_RL), (T_RH, T_RH, 255))
-    thresholded_img[red_mask] = [0, 0, 255]
+    return thresholded_img,obstacle_cnt, obstacle_cnt_expnded, goal_cnt
 
-    green_mask = cv2.inRange(image, (0, T_GL, 0), (T_GH, 255, T_GH))
-    thresholded_img[green_mask] = [0, 255, 0]
-
-    white_mask = cv2.inRange(image, (T_WL, T_WL, T_WL), (255, 255, 255))
-    thresholded_img[white_mask] = [255, 255, 255]
-
-    return thresholded_img
-
-def filter_small_red(red_mask: np.ndarray, min_size: int) -> np.ndarray:
+def filter_small_blobs(red_mask: np.ndarray, min_size: int) -> np.ndarray:
         if min_size == 1:
             return red_mask
         out_mask = np.zeros_like(red_mask)
@@ -157,7 +180,19 @@ def filter_small_red(red_mask: np.ndarray, min_size: int) -> np.ndarray:
                 continue
             component = labels == label
             if np.sum(component) >= min_size:
-                out_mask[component] = 1
+                out_mask[component] = 255
+        return out_mask
+
+
+def filter_big_blobs(red_mask: np.ndarray, max_size: int) -> np.ndarray:
+        out_mask = np.zeros_like(red_mask)
+        labels = measure.label(red_mask)
+        for label in np.unique(labels):
+            if label == 0:
+                continue
+            component = labels == label
+            if np.sum(component) <= max_size:
+                out_mask[component] = 255
         return out_mask
 
 def fill_holes(bool_mask: np.ndarray)-> np.ndarray:
@@ -165,7 +200,7 @@ def fill_holes(bool_mask: np.ndarray)-> np.ndarray:
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     filled_mask = np.zeros_like(mask)
     cv2.drawContours(filled_mask, contours, -1, 1, thickness=cv2.FILLED)
-    return filled_mask.astype(bool)
+    return filled_mask.astype(bool),contours
 
 def filter_color_noise(thresholed_image: np.ndarray, min_size)->np.ndarray:
     red_mask = np.all(thresholed_image == [0, 0, 255], axis=-1)
@@ -183,7 +218,7 @@ def filter_color_noise(thresholed_image: np.ndarray, min_size)->np.ndarray:
     t_img = np.zeros_like(thresholed_image)
     t_img[red_filled] = [0, 0, 255]
     t_img[green_filled] = [0, 255, 0]
-    t_img[white_filled] = [255, 255, 255] 
+    t_img[white_filled] = [255, 255, 255]
 
     return t_img
 
@@ -479,21 +514,20 @@ def grid1_coord2grid2_coord(coord,grid1,grid2):
     coord_grid[1]=coord*grid2.shape[1]/grid1.shape[1]
     return coord_grid
 
-def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140, T_GL=120, min_size=5000, grid_size=200,
-         threshold=25, minLineLength=20, maxLineGap=50):
+def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255,255,255]),
+        thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0]), min_size=5000, grid_size=200):
     
     image = get_image_from_camera(cam) # camera calibration inside
-
     image = correct_perspective(image, sigma=sigma, epsilon=epsilon)
 
-    image_colored = threshold_image(image, T_WL, T_RH, T_RL, T_GH, T_GL, min_size)
+    image_colored ,obstacle_cnt, obstacle_cnt_expnded, goal_cnt= full_detection_cnt(image, thresh_Thymio, thresh_obstacle, thresh_goal, min_size)
 
     grid = get_grid(image_colored, grid_size, verbose=True, full_output=False)
 
     grid_image = grid_to_image(grid)
 
     Thymio_size=-1
-    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size = Thymio_position(image, T_WL, Thymio_size)
+    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size = Thymio_position(image, thresh_Thymio, Thymio_size)
 
     #nose = get_nose(grid_image, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
 
@@ -507,30 +541,35 @@ def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140,
 
     return grid, Thymio_xytheta, c_goal, a_search_output
 
-def Thymio_position(img, T_WL, Thymio_size):
+def Thymio_position(img, thresh_Thymio, Thymio_size):
 
-    white_mask = cv2.inRange(img, np.array([T_WL, T_WL, T_WL]), np.array([255, 255, 255]))
-    kernel_close = np.ones((10, 20), np.uint8)
-    kernel_open = np.ones((10, 10), np.uint8)
-    filled_mask = cv2.morphologyEx(white_mask, cv2.MORPH_CLOSE, kernel_close) #close inside blobs
-    filled_mask = cv2.morphologyEx(filled_mask, cv2.MORPH_OPEN, kernel_open) #remove small blobs
-    cnt, hierarchy = cv2.findContours(filled_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) #or SIMPLE
-    cnt = sorted(cnt, key=cv2.contourArea, reverse=True) #sort by largest cnt, there should be only one with small blob removal but we never know :)
+    white_mask = cv2.inRange(img, thresh_Thymio[:2], thresh_Thymio[3:5])
 
     if Thymio_size<0:
-        cv2.contourArea(cnt[0])
-    elif cv2.contourArea(cnt[0])<Thymio_size*0.75:
+        cnt, hierarchy = cv2.findContours(filled_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) #or SIMPLE
+        cnt=cnt([])
+        cnt = sorted(cnt, key=cv2.contourArea, reverse=True) #sort by largest cnt, there should be only one with small blob removal but we never know :)
+        Thymio_size=cv2.contourArea(cnt[0])
+
+
+    white_mask=filter_big_blobs(white_mask,Thymio_size*1.5)
+    
+    contours, _ = cv2.findContours(white_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    cnt = contours[0]  # biggest contour
+    Thymio_mask=np.zeros_like(white_mask,dtype=np.uint8)
+    cv2.drawContours(Thymio_mask, [cnt[0]], -1, 255, thickness=cv2.FILLED)
+
+
+    if (cv2.contourArea(cnt[0])<Thymio_size*0.8):
         Thymio_x=-1000
         Thymio_y=-1000
         Thymio_theta=0
         Thymio_detected=False
         return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected
 
-    Thymio_mask=np.zeros_like(filled_mask,dtype=np.uint8)
-    cv2.drawContours(Thymio_mask, [cnt[0]], -1, 255, thickness=cv2.FILLED)
-
     #Get Centroid
-    M = cv2.moments(filled_mask)
+    M = cv2.moments(Thymio_mask)
     Thymio_x = int(M["m10"] / M["m00"])
     Thymio_y = int(M["m01"] / M["m00"])
 
@@ -542,7 +581,7 @@ def Thymio_position(img, T_WL, Thymio_size):
     #Get direction
     box_mask=np.zeros_like(Thymio_mask,dtype=np.uint8)
     cv2.drawContours(box_mask, [box], -1, 255, thickness=cv2.FILLED)
-    intersection= (box_mask & ~Thymio_mask)*255
+    intersection= cv2.bitwise_and(box_mask, ~Thymio_mask) #(box_mask & ~Thymio_mask)*255 manual but less opti
     M = cv2.moments(intersection)
     cX_nose = int(M["m10"] / M["m00"])
     cY_nose = int(M["m01"] / M["m00"])
