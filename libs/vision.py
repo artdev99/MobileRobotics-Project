@@ -204,7 +204,7 @@ def fill_holes(bool_mask: np.ndarray)-> np.ndarray:
 
 def filter_color_noise(thresholed_image: np.ndarray, min_size)->np.ndarray:
     red_mask = np.all(thresholed_image == [0, 0, 255], axis=-1)
-    min_red_mask = filter_small_red(red_mask, min_size=min_size)
+    min_red_mask = filter_small_blobs(red_mask, min_size=min_size)
     red_filled = fill_holes(min_red_mask)
 
     green_mask = np.all(thresholed_image == [0, 255, 0], axis=-1)
@@ -224,7 +224,7 @@ def filter_color_noise(thresholed_image: np.ndarray, min_size)->np.ndarray:
 
 def threshold_image(image:np.ndarray, T_WL=190, T_RH=170, T_RL=120, 
                     T_GH=138, T_GL=140, min_size=5000)->np.ndarray:
-    image = threshold_colors(image, T_WL, T_RH, T_RL, T_GH, T_GL)
+    #image = threshold_colors(image, T_WL, T_RH, T_RL, T_GH, T_GL)
     image = filter_color_noise(image, min_size)
     return image
 
@@ -546,7 +546,7 @@ def Thymio_position(img, thresh_Thymio, Thymio_size):
     white_mask = cv2.inRange(img, thresh_Thymio[:2], thresh_Thymio[3:5])
 
     if Thymio_size<0:
-        cnt, hierarchy = cv2.findContours(filled_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) #or SIMPLE
+        cnt, hierarchy = cv2.findContours(white_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) #or SIMPLE
         cnt=cnt([])
         cnt = sorted(cnt, key=cv2.contourArea, reverse=True) #sort by largest cnt, there should be only one with small blob removal but we never know :)
         Thymio_size=cv2.contourArea(cnt[0])
