@@ -505,13 +505,17 @@ def a_star_search(map_grid, start, goal):
         print(path)
         return path[::-1], explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
     else:
-        return None, explored
+        return None, explored, cost_map
     
 ##################################################################################################
 def grid1_coord2grid2_coord(coord,grid1,grid2):
     coord_grid=coord
-    coord_grid[0]=coord*grid2.shape[0]/grid1.shape[0]
-    coord_grid[1]=coord*grid2.shape[1]/grid1.shape[1]
+    if coord.ndim == 1:
+        coord_grid[0]=coord[0]*grid2.shape[0]/grid1.shape[0]
+        coord_grid[1]=coord[1]*grid2.shape[1]/grid1.shape[1]
+    else:
+        coord_grid[0,:]=coord[0,:]*grid2.shape[0]/grid1.shape[0]
+        coord_grid[1,:]=coord[1,:]*grid2.shape[1]/grid1.shape[1]
     return coord_grid
 
 def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255,255,255]),
@@ -527,7 +531,7 @@ def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255
     grid_image = grid_to_image(grid)
 
     Thymio_size=-1
-    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size, Thymio_nose = Thymio_position(image, thresh_Thymio, Thymio_size)
+    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size, Thymio_nose, Thymio_cnt = Thymio_position(image, thresh_Thymio, Thymio_size)
 
     #nose = get_nose(grid_image, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
 
@@ -537,9 +541,9 @@ def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255
     c_goal = c_goal.flatten()
     #angle_rad, angle_deg = get_orientation(nose, c_robot)
     Thymio_xytheta=np.array([[Thymio_x],[Thymio_y],[Thymio_theta]])
-    a_search_output = a_star_search(grid, grid1_coord2grid2_coord(Thymio_xytheta[:1],image,grid), c_goal)
+    path, explored, cost_map = a_star_search(grid, grid1_coord2grid2_coord(Thymio_xytheta[:1],image,grid), c_goal)
 
-    return grid, Thymio_xytheta, c_goal, a_search_output, Thymio_detected, Thymio_nose
+    return image, grid, Thymio_xytheta, c_goal, path, Thymio_detected, Thymio_nose, obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Thymio_size, Thymio_nose.reshape(2,1), Thymio_cnt
 
 def Thymio_position(img, thresh_Thymio, Thymio_size):
 
@@ -588,7 +592,7 @@ def Thymio_position(img, thresh_Thymio, Thymio_size):
 
     Thymio_theta=np.atan2(cY_nose-Thymio_y,cX_nose-Thymio_x)
     Thymio_nose=np.array([cX_nose,cY_nose])
-    return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size, 
+    return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size, Thymio_nose.reshape(2,1), cnt[0]
 
 def update_vision(cam, sigma = 5, epsilon = 0.01, T_WL=190, Thymio_size=-1):
     
@@ -597,6 +601,6 @@ def update_vision(cam, sigma = 5, epsilon = 0.01, T_WL=190, Thymio_size=-1):
     image = correct_perspective(image, sigma=sigma, epsilon=epsilon)
 
     # detection thymio
-    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected = Thymio_position(image, T_WL, Thymio_size)
+    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected,Thymio_size, Thymio_nose, Thymio_cnt = Thymio_position(image, T_WL, Thymio_size)
 
     return  Thymio_x, Thymio_y, Thymio_theta, Thymio_detected 
