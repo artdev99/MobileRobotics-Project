@@ -527,7 +527,7 @@ def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255
     grid_image = grid_to_image(grid)
 
     Thymio_size=-1
-    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size = Thymio_position(image, thresh_Thymio, Thymio_size)
+    Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size, Thymio_nose = Thymio_position(image, thresh_Thymio, Thymio_size)
 
     #nose = get_nose(grid_image, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
 
@@ -539,7 +539,7 @@ def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255
     Thymio_xytheta=np.array([[Thymio_x],[Thymio_y],[Thymio_theta]])
     a_search_output = a_star_search(grid, grid1_coord2grid2_coord(Thymio_xytheta[:1],image,grid), c_goal)
 
-    return grid, Thymio_xytheta, c_goal, a_search_output
+    return grid, Thymio_xytheta, c_goal, a_search_output, Thymio_detected, Thymio_nose
 
 def Thymio_position(img, thresh_Thymio, Thymio_size):
 
@@ -587,10 +587,8 @@ def Thymio_position(img, thresh_Thymio, Thymio_size):
     cY_nose = int(M["m01"] / M["m00"])
 
     Thymio_theta=np.atan2(cY_nose-Thymio_y,cX_nose-Thymio_x)
-    
-
-
-    return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size
+    Thymio_nose=np.array([cX_nose,cY_nose])
+    return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size, 
 
 def update_vision(cam, sigma = 5, epsilon = 0.01, T_WL=190, Thymio_size=-1):
     
