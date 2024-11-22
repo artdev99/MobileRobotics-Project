@@ -5,7 +5,7 @@ from ipywidgets import interact, FloatSlider, IntSlider
 from skimage import feature
 from libs.vision import largest_cc, find_corners, filter_small_red, find_nose_corners, get_midpoint, get_slope_intercept, get_centroids, get_orientation
 
-
+from libs.vision import BLACK, WHITE, RED, GREEN, BLUE, START, ROBOT, GOAL, OBSTACLE, BACKGROUND
 
 def show_cv2_image(img: np.ndarray, fig_size=(12,12), color="RGB", _axis=True, _title=None, _cmap=None):
     plt.figure(figsize=fig_size)
@@ -23,8 +23,76 @@ def show_cv2_image(img: np.ndarray, fig_size=(12,12), color="RGB", _axis=True, _
     
     plt.show()
 
+def show_cv2_images(img1: np.ndarray, img2: np.ndarray, 
+                    fig_size=(12, 12), color="RGB", 
+                    titles=(None, None), _axis=True, _cmap=None):
 
-def show_perspective(image: np.ndarray, sigma_init=5, epsilon_int=0.0025, epsilon_max=0.003, circle_size=10, border_size=3):
+    fig, axes = plt.subplots(1, 2, figsize=fig_size)
+    
+    # Plot the first image
+    if color == "BGR":
+        img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+    elif color != "RGB":
+        print(f"color {color} not recognized, applying default RGB")
+    axes[0].imshow(img1, cmap=_cmap)
+    if titles[0] is not None:
+        axes[0].set_title(titles[0])
+    if not _axis:
+        axes[0].axis('off')
+    
+    # Plot the second image
+    if color == "BGR":
+        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+    axes[1].imshow(img2, cmap=_cmap)
+    if titles[1] is not None:
+        axes[1].set_title(titles[1])
+    if not _axis:
+        axes[1].axis('off')
+    
+    plt.tight_layout()
+    plt.show()
+
+def show_perspective(image: np.ndarray, sigma_init=5, t1_init=50, t2_init=150, epsilon_int=0.0025, epsilon_max=0.003, circle_size=10, border_size=3):
+    def update(sigma, epsilon, t1, t2):
+        blurred_image = cv2.GaussianBlur(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), (sigma, sigma), 1.4)
+        edges = cv2.Canny(blurred_image, t1, t2)
+        mask = largest_cc(edges)
+        corners = find_corners(mask, epsilon=epsilon, eps_security=False, verbose=True)
+
+        img_corners = image.copy()
+        cv2.drawContours(img_corners, [corners.reshape(-1, 2)], -1, (255, 255, 0), border_size)
+        for corner in corners:
+            cv2.circle(img_corners, tuple(corner), circle_size, (255, 0, 255), -1)
+
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        fig.suptitle(f"Distortion Correction (sigma={sigma:.2f}, epsilon={epsilon:.4f})", fontsize=16)
+        
+        # Input image
+        axes[0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        axes[0].set_title("Input Image")
+        axes[0].axis("on")
+        
+        # Edges
+        axes[1].imshow(edges, cmap='gray')
+        axes[1].set_title("Edges")
+        axes[1].axis("on")
+        
+        # Corners on the original image
+        axes[2].imshow(cv2.cvtColor(img_corners, cv2.COLOR_BGR2RGB))
+        axes[2].set_title("Corners")
+        axes[2].axis("on")
+        
+        plt.show()
+    
+    interact(
+        update, 
+        sigma=IntSlider(value=sigma_init, min=1, max=11, step=2, description='Sigma'),
+        epsilon=FloatSlider(value=epsilon_int, min=0.0001, max=epsilon_max, step=0.0001, description='Epsilon', readout_format='.4f'),
+        t1=IntSlider(value=t1_init, min=1, max=255, step=1, description="T1"),
+        t2=IntSlider(value=t2_init, min=1, max=255, step=2, description="T2")
+    )
+
+def show_perspective_old(image: np.ndarray, sigma_init=5, epsilon_int=0.0025, epsilon_max=0.003, circle_size=10, border_size=3):
     def update(sigma, epsilon):
         edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
         mask = largest_cc(edges)
@@ -67,33 +135,33 @@ def show_thresholds(image: np.ndarray, T_WL_init=190, T_RH_init=140, T_RL_init=1
     def update(T_WL, T_RH, T_RL, T_GH, T_GL, min_size, x_coord):
         red_mask = cv2.inRange(image, (0, 0, T_RL), (T_RH, T_RH, 255))
         red_threshold = np.zeros_like(image)
-        red_threshold[red_mask > 0] = [0, 0, 255]
+        red_threshold[red_mask > 0] = RED
 
         green_mask = cv2.inRange(image, (0, T_GL, 0), (T_GH, 255, T_GH))
         green_threshold = np.zeros_like(image)
-        green_threshold[green_mask > 0] = [0, 255, 0]
+        green_threshold[green_mask > 0] = GREEN
 
         white_mask = cv2.inRange(image, (T_WL, T_WL, T_WL), (255, 255, 255))
         white_threshold = np.zeros_like(image)
-        white_threshold[white_mask > 0] = [255, 255, 255]
+        white_threshold[white_mask > 0] = WHITE
         
         combined_thresholds = np.zeros_like(image)
-        combined_thresholds[red_mask > 0] = [0, 0, 255]
-        combined_thresholds[green_mask > 0] = [0, 255, 0]
-        combined_thresholds[white_mask > 0] = [255, 255, 255]
+        combined_thresholds[red_mask > 0] = RED
+        combined_thresholds[green_mask > 0] = GREEN
+        combined_thresholds[white_mask > 0] = WHITE
 
         lcc_white_mask = largest_cc(white_mask)
         lcc_green_mask = largest_cc(green_mask)
-        filtered_red_mask = filter_small_red(np.all(combined_thresholds == [0, 0, 255], axis=-1), min_size)
+        filtered_red_mask = filter_small_red(np.all(combined_thresholds == RED, axis=-1), min_size)
         
         filtered_white = np.zeros_like(image)
-        filtered_white[lcc_white_mask] = [255, 255, 255]
+        filtered_white[lcc_white_mask] = WHITE
         
         filtered_green = np.zeros_like(image)
-        filtered_green[lcc_green_mask] = [0, 255, 0]
+        filtered_green[lcc_green_mask] = GREEN
         
         filtered_red = np.zeros_like(image)
-        filtered_red[filtered_red_mask > 0] = [0, 0, 255]
+        filtered_red[filtered_red_mask > 0] = RED
 
         x_coord = min(max(0, x_coord), width - 1)
         red_intensity = image[:, x_coord, 2]
@@ -174,7 +242,8 @@ def show_thresholds(image: np.ndarray, T_WL_init=190, T_RH_init=140, T_RL_init=1
         x_coord=IntSlider(value=width // 2, min=0, max=width - 1, step=1, description='X Coord')
     )
 
-def show_grid(grid: np.ndarray, fig_size=(6,6), c_obs=None, c_robot=None, c_goal=None):
+
+def show_grid(grid: np.ndarray, fig_size=(6,6), c_obs=None, c_robot=None, c_goal=None, path=None):
     height, width = grid.shape
     grid_image = np.zeros((height, width, 3), dtype=np.uint8)
     
@@ -188,11 +257,11 @@ def show_grid(grid: np.ndarray, fig_size=(6,6), c_obs=None, c_robot=None, c_goal
 
     for i in range(height):
         for j in range(width):
-            if grid[i, j] == 1:  # Start/robot
-                grid_image[i:(i + 1), j:(j + 1)] = [255, 255, 255]
-            elif grid[i, j] == 2:  # Goal
-                grid_image[i:(i + 1), j:(j + 1)] = [0, 255, 0]
-            elif grid[i, j] == -1:  # Obstacle
+            if grid[i, j] == ROBOT:  # Start/robot
+                grid_image[i:(i + 1), j:(j + 1)] = WHITE
+            elif grid[i, j] == GOAL:  # Goal
+                grid_image[i:(i + 1), j:(j + 1)] = GREEN
+            elif grid[i, j] == OBSTACLE:  # Obstacle
                 grid_image[i:(i + 1), j:(j + 1)] = [255, 0, 0]
 
     if c_obs is not None:
@@ -207,9 +276,16 @@ def show_grid(grid: np.ndarray, fig_size=(6,6), c_obs=None, c_robot=None, c_goal
         for c in c_goal:
             grid_image[c[1], c[0]] = [0, 80, 0]  # Dark green for goal
 
+    if path is not None:
+        # Exclude the first and last points (start and goal)
+        for c in path[1:-1]:
+            grid_image[c[1], c[0]] = [0, 0, 0]
+
     plt.figure(figsize=fig_size)
     plt.imshow(grid_image)
-    if c_obs is not None and c_robot is not None and c_goal is not None:
+    if c_obs is not None and c_robot is not None and c_goal is not None and path is not None:
+        plt.title(f"Grid {width} x {height} with centroids and A* path")
+    elif c_obs is not None and c_robot is not None and c_goal is not None:
         plt.title(f"Grid {width} x {height} with centroids")
     else: 
         plt.title(f"Grid {width} x {height}")
@@ -217,14 +293,14 @@ def show_grid(grid: np.ndarray, fig_size=(6,6), c_obs=None, c_robot=None, c_goal
     plt.show()
 
 
-def show_nose(image:np.array, sigma_init=5, threshold_init=50, minLineLength_init=20, maxLineGap_init=50, circleSize_init=10):
-    def update(sigma, threshold, minLineLength, maxLineGap, circleSize):
+def show_nose(image:np.array, sigma_init=5, t1_init=50, t2_init=150, threshold_init=50, minLineLength_init=20, maxLineGap_init=50, circleSize_init=10):
+    def update(sigma, t1, t2, threshold, minLineLength, maxLineGap, circleSize):
         img = image.copy()
 
 
-        curve, bp1, bp2 = find_nose_corners(img, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
+        curve, bp1, bp2 = find_nose_corners(img, sigma=sigma, t1=t1, t2=t2, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
         mid = get_midpoint(bp1, bp2)
-        centroid = get_centroids(img, [255,255,255])
+        centroid = get_centroids(img, WHITE)
         slope, intercept = get_slope_intercept(mid, centroid.flatten())
         if slope is None:
             x = mid[0]
@@ -237,7 +313,12 @@ def show_nose(image:np.array, sigma_init=5, threshold_init=50, minLineLength_ini
         nose = None
 
         # for iteractive hough
-        edges = feature.canny(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), sigma=sigma)
+        #edges = feature.canny(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), sigma=sigma)
+        temp = np.zeros_like(image)
+        mask = np.all(image == WHITE, axis=-1)  
+        temp[mask] = WHITE
+        blurred_image = cv2.GaussianBlur(cv2.cvtColor(temp, cv2.COLOR_BGR2GRAY), (sigma, sigma), 1.4)
+        edges = cv2.Canny(blurred_image, t1, t2)
         mask = largest_cc(edges).astype(np.uint8) * 255
         lines = cv2.HoughLinesP(mask, rho=1, theta=np.pi/180, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
         lines_mask = np.zeros_like(edges).astype(np.uint8) * 255
@@ -290,11 +371,13 @@ def show_nose(image:np.array, sigma_init=5, threshold_init=50, minLineLength_ini
 
     interact(
         update,
-        sigma=FloatSlider(value=sigma_init, min=1, max=10, step=0.1, description='Sigma', readout_format='.2f'),
+        sigma=IntSlider(value=sigma_init, min=1, max=10, step=1, description='Sigma'),
         threshold=IntSlider(value=threshold_init, min=1, max=200, step=1, description='Threshold'),
         minLineLength=IntSlider(value=minLineLength_init, min=1, max=200, step=1, description='Min Line Length'),
         maxLineGap=IntSlider(value=maxLineGap_init, min=1, max=200, step=1, description='Max Line Gap'),
-        circleSize=IntSlider(value=circleSize_init, min=1, max=10, step=1, description='Circle Size')
+        circleSize=IntSlider(value=circleSize_init, min=1, max=10, step=1, description='Circle Size'),
+        t1=IntSlider(value=t1_init, min=1, max=255, step=1, description="T1"),
+        t2=IntSlider(value=t2_init, min=1, max=255, step=2, description="T2"),
     )
 
 # image threshold=100, minLineLength=120, maxLineGap=200
