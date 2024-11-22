@@ -5,31 +5,158 @@ from scipy.spatial import distance
 import os
 from heapq import heappush, heappop
 
-def get_image_from_camera(cam):
+WHITE = [255,255,255]
+RED = [0,0,255]
+GREEN = [0,255,0]
+BLUE = [255,0,0]
+BLACK = [0,0,0]
+
+START = 1
+ROBOT = 1
+GOAL = -2
+OBSTACLE = -1
+BACKGROUND = 0
+
+##################################################################################################
+
+def get_object(code):
+    if isinstance(code, list):
+        if code == WHITE:
+            return ROBOT
+        if code == GREEN:
+            return GOAL
+        if code == RED:
+            return OBSTACLE
+        if code == BLACK:
+            return BACKGROUND
+    elif isinstance(code, str):
+        if code == "robot" or code == "start":
+            return ROBOT
+        if code == "goal":
+            return GOAL
+        if code == "obstacle":
+            return OBSTACLE
+        if code == "background":
+            return BACKGROUND
+    else:
+        ValueError("Color not supported")
+
+def get_color(code):
+    if isinstance(code, str):
+        if code == "start" or code == "robot":
+            return np.array(WHITE, dtype=np.uint8)
+        if code == "obstacle":
+            return np.array(RED, dtype=np.uint8)
+        if code == "goal":
+            return np.array(GREEN, dtype=np.uint8)
+        if code == "background":
+            return np.array(BLACK, dtype=np.uint8)
+    elif isinstance(code, int):
+        if code == ROBOT:
+            return np.array(WHITE, dtype=np.uint8)
+        if code == OBSTACLE:
+            return np.array(RED, dtype=np.uint8)
+        if code == GOAL:
+            return np.array(GREEN, dtype=np.uint8)
+        if code == BACKGROUND:
+            return np.array(BLACK, dtype=np.uint8)
+    else:
+        raise ValueError("Code not supported")
+
+##################################################################################################
+
+def setup_camera(camera, resolution=None, fps=None):
+    """
+    1920, 1080 (16:9)
+    1280, 720  (16:9)
+    640, 380   (16:9)
+    320, 240   (4:3)
+    """
+    if resolution is not None:
+        width, height = resolution
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, int(width))
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, int(height))
+    if fps is not None:
+        camera.set(cv2.CAP_PROP_FPS, fps)
+
+    w = int(camera.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    f = int(camera.get(cv2.CAP_PROP_FPS))
+
+    print(f"Resolution is: {w}x{h}")
+    print(f"FPS is: {f}") 
+
+def get_image_from_camera(cam, distortion=False, alpha=1, var_treshold=2000):
     ret, frame = cam.read()
     if not ret:
         print("Failed to capture image")
         return None
-    img = correct_camera_perspective(frame)
-    return img
+    if camera_obstructed(frame, var_treshold):
+        return None
+    if distortion:
+        frame = correct_camera_distortion(frame, alpha)
+    return frame
 
-def correct_camera_perspective(img):
+def correct_camera_distortion(img, alpha):
     try:
-        mtx = np.load("camera_matrix.npy")
-        dist = np.load("distortion_coefficients.npy")
+        mtx = np.load("libs/camera_matrix_1080.npy")
+        dist = np.load("libs/distortion_coefficients_1080.npy")
     except FileNotFoundError:
-        print("Calibration files not found.")
-        exit()
+        print("Calibration files not found")
 
     h,  w = img.shape[:2]
-    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 0, (w,h))
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), alpha, (w,h))
     
     dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
-    # crop the image borders
-    x, y, w, h = roi
+    x, y, w, h = roi # crop the image borders
     dst = dst[y:y+h, x:x+w]
 
     return dst
+
+def get_image_live(cam, sigma=5, t1=50, t2=150, epsilon=0.1, circle_size=10, border_size=3, resize_factor=0.5):
+    if not cam.isOpened():
+        print("Error: Camera could not be opened.")
+        cam.release()
+        exit()
+
+    image = None 
+    print("Press 's' to save an image or 'q' to quit.")
+
+    while True:
+        ret, frame = cam.read()  
+        if not ret:
+            print("Failed to grab frame. Exiting.")
+            break
+        temp = frame.copy()
+        temp = cv2.resize(temp, None, fx=resize_factor, fy=resize_factor, interpolation=cv2.INTER_AREA)
+
+        #edges = feature.canny(cv2.cvtColor(temp, cv2.COLOR_BGR2GRAY), sigma=sigma)
+        blurred_image = cv2.GaussianBlur(cv2.cvtColor(temp, cv2.COLOR_BGR2GRAY), (sigma, sigma), 1.4)
+        edges = cv2.Canny(blurred_image, t1, t2)
+        mask = largest_cc(edges)
+        corners = find_corners(mask, epsilon=epsilon, eps_security=False, verbose=False)
+
+        cv2.drawContours(temp, [corners.reshape(-1, 2)], -1, (255, 255, 0), border_size)
+        for corner in corners:
+            cv2.circle(temp, tuple(corner), circle_size, (255, 0, 255), -1)
+        cv2.imshow("Live Feed", temp)
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == ord('s'):  
+            image = frame.copy()  
+            print("Image saved to variable 'image'.")
+        elif key == ord('q'):  
+            print("Exiting.")
+            break
+
+    #cam.release()
+    cv2.destroyWindow("Live Feed")  
+
+    if image is not None:
+        print(f"Shape: {image.shape}, pixels {image.shape[0]*image.shape[1]}")
+
+    return image
+
 
 def get_image_from_file(image_path: str)-> np.ndarray:
     """
@@ -48,19 +175,40 @@ def get_image_from_file(image_path: str)-> np.ndarray:
         print(f"An unexpected error occurred: {e}")
 
 
+def camera_obstructed(frame, var_treshold=2000):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    var = np.var(gray)
+    return var < var_treshold
+
+
 ##################################################################################################
 
 
-def largest_cc(mask: np.ndarray)->np.ndarray:
+def largest_cc_old(mask: np.ndarray)->np.ndarray:
     """
     Input: an mask
-    Output: mask of the largest connected component
+    Output: boolean mask of the largest connected component
     """
     labels = measure.label(mask)
     counts = np.bincount(labels.ravel())
     counts[0] = 0 # disregard background
     largest_label = counts.argmax()
     lcc_mask = labels == largest_label
+    return lcc_mask
+
+def largest_cc(mask: np.ndarray) -> np.ndarray:
+    """
+    Input: a binary mask
+    Output: boolean mask of the largest connected component
+    """
+    if mask.dtype != np.uint8:
+        mask = mask.astype(np.uint8)
+
+    _, labels = cv2.connectedComponents(mask)
+    counts = np.bincount(labels.ravel())
+    counts[0] = 0  # disregard background
+    largest_label = counts.argmax()
+    lcc_mask = (labels == largest_label)
     return lcc_mask
 
 def find_corners(lcc_mask: np.ndarray, epsilon: float, eps_security=True, verbose=True)->np.ndarray:
@@ -113,8 +261,10 @@ def compute_destination_size(ordered_corners):
 
     return max_width, max_height
 
-def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01, eps_security=True, verbose=False) -> np.ndarray:
-    edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
+def correct_perspective(image: np.ndarray, sigma=5, t1=50, t2=150, epsilon=0.01, eps_security=True, verbose=False) -> np.ndarray:
+    #edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
+    blurred_image = cv2.GaussianBlur(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), (sigma, sigma), 1.4)
+    edges = cv2.Canny(blurred_image, t1, t2)
     mask = largest_cc(edges)
     corners = find_corners(mask, epsilon=epsilon, eps_security=eps_security, verbose=verbose)
     ordered_corners = order_points(corners)
@@ -130,20 +280,22 @@ def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01, eps_security=T
 
 
 ##################################################################################################
+
+
+def threshold_color(image, t_image, t_lows, t_highs, color):
+    mask = cv2.inRange(image, t_lows, t_highs)
+    t_image[mask > 0] = color
+    return t_image
+
 def threshold_colors(image: np.ndarray, T_WL: int, T_RH: int, T_RL: int, T_GH: int, T_GL: int) -> np.ndarray:
     thresholded_img = np.zeros_like(image)
     
     if T_WL == 0 and T_RL == 0 and T_RH == 255 and T_GH == 255 and T_GL == 0:
         return image
 
-    red_mask = cv2.inRange(image, (0, 0, T_RL), (T_RH, T_RH, 255))
-    thresholded_img[red_mask > 0] = [0, 0, 255]
-
-    green_mask = cv2.inRange(image, (0, T_GL, 0), (T_GH, 255, T_GH))
-    thresholded_img[green_mask > 0] = [0, 255, 0]
-
-    white_mask = cv2.inRange(image, (T_WL, T_WL, T_WL), (255, 255, 255))
-    thresholded_img[white_mask > 0] = [255, 255, 255]
+    thresholded_img = threshold_color(image, thresholded_img, (0, 0, T_RL), (T_RH, T_RH, 255), RED)
+    thresholded_img = threshold_color(image, thresholded_img, (0, T_GL, 0), (T_GH, 255, T_GH), GREEN)
+    thresholded_img = threshold_color(image, thresholded_img, (T_WL, T_WL, T_WL), (255, 255, 255), WHITE)
 
     return thresholded_img
 
@@ -168,56 +320,105 @@ def fill_holes(bool_mask: np.ndarray)-> np.ndarray:
     return filled_mask.astype(bool)
 
 def filter_color_noise(thresholed_image: np.ndarray, min_size)->np.ndarray:
-    red_mask = np.all(thresholed_image == [0, 0, 255], axis=-1)
+    red_mask = np.all(thresholed_image == RED, axis=-1)
     min_red_mask = filter_small_red(red_mask, min_size=min_size)
     red_filled = fill_holes(min_red_mask)
 
-    green_mask = np.all(thresholed_image == [0, 255, 0], axis=-1)
+    green_mask = np.all(thresholed_image == GREEN, axis=-1)
     lcc_green_mask = largest_cc(green_mask)
     green_filled = fill_holes(lcc_green_mask)
 
-    white_mask = np.all(thresholed_image == [255, 255, 255], axis=-1)
+    white_mask = np.all(thresholed_image == WHITE, axis=-1)
     lcc_white_mask = largest_cc(white_mask)
     white_filled = fill_holes(lcc_white_mask)
 
     t_img = np.zeros_like(thresholed_image)
-    t_img[red_filled] = [0, 0, 255]
-    t_img[green_filled] = [0, 255, 0]
-    t_img[white_filled] = [255, 255, 255] 
+    t_img[red_filled] = RED
+    t_img[green_filled] = GREEN
+    t_img[white_filled] = WHITE 
 
     return t_img
 
-def threshold_image(image:np.ndarray, T_WL=190, T_RH=170, T_RL=120, 
+def threshold_image2(image:np.ndarray, T_WL=190, T_RH=170, T_RL=120, 
                     T_GH=138, T_GL=140, min_size=5000)->np.ndarray:
     image = threshold_colors(image, T_WL, T_RH, T_RL, T_GH, T_GL)
+
     image = filter_color_noise(image, min_size)
     return image
 
 
+def threshold_image(image:np.ndarray, T_WL=190, T_RH=170, T_RL=120, 
+                    T_GH=138, T_GL=140, min_size=5000, dilatation=True)->np.ndarray:
+    
+
+    output_image = np.zeros_like(image)
+
+    robot_mask = cv2.inRange(image, (T_WL, T_WL, T_WL), (255, 255, 255))
+    contours, _ = cv2.findContours(robot_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)
+        largest_contour = contours[0]
+        filled_mask = np.zeros_like(robot_mask)
+        cv2.drawContours(filled_mask, [largest_contour], -1, 1, thickness=cv2.FILLED)
+        output_image[filled_mask > 0] = [255, 255, 255] 
+
+        if dilatation:
+            _, radius = cv2.minEnclosingCircle(largest_contour)
+            radius = int(np.ceil(radius)) 
+            #kernel_size = 2 * radius + 1
+            kernel_size = int(np.ceil(radius/2)) # test big kernel size on big scene later
+            #kernel = np.zeros((kernel_size, kernel_size), dtype=np.uint8)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+
+    goal_mask = cv2.inRange(image, (0, T_GL, 0), (T_GH, 255, T_GH))
+    contours, _ = cv2.findContours(goal_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)
+        largest_contour = contours[0]
+        filled_mask = np.zeros_like(goal_mask)
+        cv2.drawContours(filled_mask, [largest_contour], -1, 1, thickness=cv2.FILLED)
+        output_image[filled_mask > 0] = [0, 255, 0]  
+
+    obs_mask = cv2.inRange(image, (0, 0, T_RL), (T_RH, T_RH, 255))
+    min_red_mask = filter_small_red(obs_mask, min_size=min_size) 
+    red_filled = fill_holes(min_red_mask) 
+    if dilatation:
+        if kernel is not None: 
+            red_expanded = cv2.dilate(red_filled.astype(np.uint8), kernel, iterations=1)
+        else:
+            print("Warning: Robot not detected. Obstacles not expanded.")
+            red_expanded = red_filled
+        red_expanded = cv2.dilate(red_filled.astype(np.uint8), kernel, iterations=1)
+        output_image[red_expanded > 0] = [0, 0, 255]
+    else:
+        output_image[red_filled > 0] = [0, 0, 255]
+
+    return output_image
+
 ##################################################################################################
 
 
-def get_dominant_color(block:np.ndarray, verbose: bool)->np.ndarray:
+def get_dominant_object(block:np.ndarray, verbose: bool)->int:
     pixels = block.reshape(-1, 3)
 
-    has_white = np.any(np.all(pixels == [255, 255, 255], axis=1))
-    has_green = np.any(np.all(pixels == [0, 255, 0], axis=1))
-    has_red = np.any(np.all(pixels == [0, 0, 255], axis=1))
+    has_white = np.any(np.all(pixels == WHITE, axis=1))
+    has_green = np.any(np.all(pixels == GREEN, axis=1))
+    has_red = np.any(np.all(pixels == RED, axis=1))
 
     if has_white:
         if has_red and verbose:
             print("Collision start with obstacle")
         elif has_green and verbose:
             print("Collision start goal")
-        return np.array([255, 255, 255], dtype=np.uint8)
+        return ROBOT # np.array([255, 255, 255], dtype=np.uint8)
     elif has_green:
         if has_red and verbose:
             print("Collision goal with obstacle")
-        return np.array([0, 255, 0], dtype=np.uint8)    
+        return GOAL # np.array([0, 255, 0], dtype=np.uint8)    
     elif has_red:
-        return np.array([0, 0, 255], dtype=np.uint8)
+        return OBSTACLE # np.array([0, 0, 255], dtype=np.uint8)
     else:
-        return np.array([0, 0, 0], dtype=np.uint8) 
+        return BACKGROUND #np.array([0, 0, 0], dtype=np.uint8) 
 
 
 def discretize_image(image:np.ndarray, grid_size: int, verbose: bool, full_output: bool):
@@ -225,45 +426,46 @@ def discretize_image(image:np.ndarray, grid_size: int, verbose: bool, full_outpu
     Discretizes an OpenCV image using a grid of grid_size x grid_size cells.
     """
     height, width, _ = image.shape
-    cell_height = height // grid_size
-    cell_width = width // grid_size
 
-    grid_image = np.zeros((grid_size, grid_size, 3), dtype=np.uint8)
+    x_coords = np.linspace(0, width, num=grid_size+1, endpoint=True, dtype=int)
+    y_coords = np.linspace(0, height, num=grid_size+1, endpoint=True, dtype=int)
+
+    grid = np.zeros((grid_size, grid_size), dtype=np.int8)
     if full_output:
         discretized_image = np.copy(image)
 
     for i in range(grid_size):
         for j in range(grid_size):
-            start_y = i * cell_height
-            end_y = (i + 1) * cell_height
-            start_x = j * cell_width
-            end_x = (j + 1) * cell_width
+            start_x = x_coords[j]
+            end_x = x_coords[j+1]
+            start_y = y_coords[i]
+            end_y = y_coords[i+1]
 
             block = image[start_y:end_y, start_x:end_x]
 
-            dominant_color = get_dominant_color(block, verbose)
+            dominant_object = get_dominant_object(block, verbose)
 
-            grid_image[i, j] = dominant_color
+            grid[i, j] = dominant_object
             if full_output:
-                discretized_image[start_y:end_y, start_x:end_x] = dominant_color
+                discretized_image[start_y:end_y, start_x:end_x] = get_color(dominant_object)
 
     if full_output:
-        return grid_image, discretized_image
+        return grid, discretized_image
     else:
-        return grid_image
+        return grid
     
 def image_to_grid(grid_image: np.ndarray) -> np.ndarray:
     grid = np.zeros((grid_image.shape[0], grid_image.shape[1]), dtype=np.int8)
     
-    background_mask = np.all(grid_image == [0, 0, 0], axis=-1)
-    start_mask = np.all(grid_image == [255, 255, 255], axis=-1)
-    goal_mask = np.all(grid_image == [0, 255, 0], axis=-1)
-    obstacle_mask = np.all(grid_image == [0, 0, 255], axis=-1)
+    background_mask = np.all(grid_image == BLACK, axis=-1)
+    start_mask = np.all(grid_image == WHITE, axis=-1)
+    goal_mask = np.all(grid_image == GREEN, axis=-1)
+    obstacle_mask = np.all(grid_image == RED, axis=-1)
     
-    grid[background_mask] = 0
-    grid[start_mask] = 1
-    grid[goal_mask] = 2
-    grid[obstacle_mask] = -1
+    grid[background_mask] = BACKGROUND
+    grid[start_mask] = ROBOT
+    grid[goal_mask] = GOAL
+    grid[obstacle_mask] = OBSTACLE
     
     return grid
 
@@ -271,16 +473,15 @@ def image_to_grid(grid_image: np.ndarray) -> np.ndarray:
 def grid_to_image(grid: np.ndarray) -> np.ndarray:
     grid_image = np.zeros((grid.shape[0], grid.shape[1], 3), dtype=np.uint8)
     
-    grid_image[grid == 0] = [0, 0, 0] # background/empty
-    grid_image[grid == 1] = [255, 255, 255] # start/robot
-    grid_image[grid == 2] = [0, 255, 0] # goal
-    grid_image[grid == -1] = [0, 0, 255] # obstacle   
+    grid_image[grid == BACKGROUND] = BLACK # background/empty
+    grid_image[grid == ROBOT] = WHITE # start/robot
+    grid_image[grid == GOAL] = GREEN # goal
+    grid_image[grid == OBSTACLE] = RED # obstacle   
     
     return grid_image
 
 def get_grid(image: np.ndarray, grid_size=100, verbose=True, full_output=False)->np.ndarray:
-    grid_image = discretize_image(image, grid_size, verbose, full_output)
-    grid = image_to_grid(grid_image)
+    grid = discretize_image(image, grid_size, verbose, full_output)
     return grid
 
 
@@ -288,20 +489,11 @@ def get_grid(image: np.ndarray, grid_size=100, verbose=True, full_output=False)-
 
 def get_centroids(grid:np.ndarray, _object):
     
-    object_code_map = {
-        "obstacle": -1,
-        "start": 1,
-        "robot": 1,
-        "goal": 2,
-    }
-    
     is_image = len(grid.shape) == 3 and grid.shape[2] == 3
 
     if isinstance(_object, str):
         if not is_image:
-            if _object not in object_code_map:
-                raise ValueError(f"Invalid object type string: {_object}. Must be one of {list(object_code_map.keys())}.")
-            object_code = object_code_map[_object]
+            object_code = get_object(_object)
         else:
             raise ValueError("String object types are only supported for grid inputs.")
     elif is_image and isinstance(_object, (list, tuple, np.ndarray)) and len(_object) == 3:
@@ -327,8 +519,13 @@ def get_centroids(grid:np.ndarray, _object):
     
     return centroids
 
-def find_nose_corners(image: np.ndarray, sigma, threshold=100, minLineLength=100, maxLineGap=200)->np.ndarray:
-    edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
+def find_nose_corners(image: np.ndarray, sigma=5, t1=50, t2=150, threshold=100, minLineLength=100, maxLineGap=200)->np.ndarray:
+    #edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
+    temp = np.zeros_like(image)
+    mask = np.all(image == WHITE, axis=-1)  
+    temp[mask] = WHITE
+    blurred_image = cv2.GaussianBlur(cv2.cvtColor(temp, cv2.COLOR_BGR2GRAY), (sigma, sigma), 1.4)
+    edges = cv2.Canny(blurred_image, t1, t2)
     mask = largest_cc(edges).astype(np.uint8) * 255
     lines = cv2.HoughLinesP(mask, rho=1, theta=np.pi/180, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
 
@@ -372,8 +569,8 @@ def get_slope_intercept(point1, point2):
     intercept = point1[1] - slope * point1[0]
     return slope, intercept
 
-def get_nose(image:np.array, sigma=5, threshold=25, minLineLength=20, maxLineGap=50):
-    curve, bp1, bp2 = find_nose_corners(image, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
+def get_nose(image:np.array, sigma=5, t1=50, t2=150, threshold=25, minLineLength=20, maxLineGap=50):
+    curve, bp1, bp2 = find_nose_corners(image, t1=t1, t2=t2, sigma=sigma, threshold=threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
     mid = get_midpoint(bp1, bp2)
     centroid = get_centroids(image, [255,255,255])
     slope, intercept = get_slope_intercept(mid, centroid.flatten())
@@ -411,9 +608,13 @@ def get_orientation(nose, centroid):
 
 def heuristic(a, b):
     #Euclidian Distance
-    return np.linalg.norm(a-b,2)
+    return np.linalg.norm(np.array(a) - np.array(b), 2)
 
 def a_star_search(map_grid, start, goal):
+
+    start = tuple(start)
+    goal = tuple(goal)
+
     #Initialize the open set as a priority queue and add the start node
     open_set = []
     heappush(open_set,(0+heuristic(start,goal),0,start))
@@ -421,7 +622,7 @@ def a_star_search(map_grid, start, goal):
     came_from = {}
     g_costs = {start: 0}
     explored = set()
-    cost_map=-1*np.zeros_like(map_grid)
+    cost_map=-1*np.zeros_like(map_grid, dtype=np.int32)
 
     while open_set:  # While the open set is not empty
 
@@ -450,7 +651,7 @@ def a_star_search(map_grid, start, goal):
                 
                 # Calculate tentative_g_cost
                 tentative_g_cost = g_costs[current_pos]+(map_grid[neighbor]) #cost is 1 y default on the map_grid
-
+                #tentative_g_cost = g_costs[current_pos] + 1 # above was unstable after dilating the obstacles for some reason
                 # If this path to neighbor is better than any previous one
                 if neighbor not in g_costs or tentative_g_cost < g_costs[neighbor]:
                     # Update came_from and g_costs
@@ -467,13 +668,14 @@ def a_star_search(map_grid, start, goal):
         path=[goal]
         while path[-1]!=start:
             path.append(came_from[path[-1]])
-        print(path)
-        return path[::-1], explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
+        path[::-1]
+        path = np.array(path).astype(np.int32)
+        return path, explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
     else:
-        return None, explored
+        return None, None, explored
     
 ##################################################################################################
-
+"""
 def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140, T_GL=120, min_size=5000, grid_size=200,
          threshold=25, minLineLength=20, maxLineGap=50):
     
@@ -500,14 +702,29 @@ def init(cam, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140,
     a_search_output = a_star_search(grid, c_robot, c_goal)
 
     return grid, c_robot, c_goal, c_obstacles, angle_rad, angle_deg, a_search_output
-
-def update_vision(cam, grid, sigma = 5, epsilon = 0.01, T_WL=190, T_RH=140, T_RL=120, T_GH=140, T_GL=120, min_size=5000, grid_size=200,
-         threshold=25, minLineLength=20, maxLineGap=50):
+"""
+def update_vision(cam, grid, sigma = 5, t1=50, t2=150, epsilon = 0.01, T_WL=190, t1_nose=50, t2_nose=150, threshold=25, minLineLength=20, maxLineGap=50):
     
-    image = get_image_from_camera(cam)
-    
-    image = correct_perspective(image, sigma=sigma, epsilon=epsilon)
+    img = get_image_from_camera(cam)
 
-    # detection thymio
-    # kalman 
-    # update grid
+    if img is not None:
+        img = correct_perspective(img, sigma=sigma, t1=t1, t2=t2, epsilon=epsilon)
+        threshold_image = np.zeros_like(img)
+        robot_mask = cv2.inRange(img, (T_WL, T_WL, T_WL), (255, 255, 255))
+        contours, _ = cv2.findContours(robot_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:
+            contours = sorted(contours, key=cv2.contourArea, reverse=True)
+            largest_contour = contours[0]
+            filled_mask = np.zeros_like(robot_mask)
+            cv2.drawContours(filled_mask, [largest_contour], -1, 1, thickness=cv2.FILLED)
+            threshold_image[filled_mask > 0] = [255, 255, 255] 
+
+            grid[grid == ROBOT] = 0
+            filled_mask_resized = cv2.resize(filled_mask.astype(np.uint8), (grid.shape[1], grid.shape[0]), interpolation=cv2.INTER_NEAREST)
+            grid[filled_mask_resized > 0] = ROBOT
+
+            c_robot = get_centroids(grid, ROBOT)
+            nose = get_nose(grid_to_image(grid), sigma=sigma, t1=t1_nose, t2=t2_nose, threshold= threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
+            angle, angle_deg = get_orientation(nose, c_robot.flatten())
+
+    return grid, c_robot, nose, angle, angle_deg

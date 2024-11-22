@@ -5,7 +5,7 @@ from PIL import Image
 import os
 import glob
 
-name = "bottom-right" # MODIFY NAME
+name = "simple" # MODIFY NAME
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 file_matches = glob.glob(os.path.join(script_dir, f"{name}.*"))
