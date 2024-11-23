@@ -12,12 +12,12 @@ def get_image_from_camera(cam,distorsion=False):
         print("Failed to capture image")
         return None
     if distorsion:
-        return correct_camera_perspective(frame)
+        return correct_camera_distorsion(frame)
     else:
         return frame
 
 
-def correct_camera_perspective(img):
+def correct_camera_distorsion(img):
     try:
         mtx = np.load("grid/camera_matrix.npy")
         dist = np.load("grid/distortion_coefficients.npy")
@@ -117,20 +117,23 @@ def compute_destination_size(ordered_corners):
 
     return max_width, max_height
 
-def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01, eps_security=True, verbose=False) -> np.ndarray:
-    edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
-    mask = largest_cc(edges)
-    corners = find_corners(mask, epsilon=epsilon, eps_security=eps_security, verbose=verbose)
-    ordered_corners = order_points(corners)
-    max_width, max_height = compute_destination_size(ordered_corners)
-    destination_corners = np.array([
-        [0, 0],
-        [max_width - 1, 0],
-        [max_width - 1, max_height - 1],
-        [0, max_height - 1]], dtype="float32")
-    M = cv2.getPerspectiveTransform(ordered_corners, destination_corners)
-    corrected_image = cv2.warpPerspective(image, M, (max_width, max_height), flags=cv2.INTER_LINEAR)
-    return corrected_image
+def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01,M=0,max_width_perspective=0, max_height_perspective=0,get_matrix=True, eps_security=True, verbose=False) -> np.ndarray:
+    if get_matrix:
+        edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
+        mask = largest_cc(edges)
+        corners = find_corners(mask, epsilon=epsilon, eps_security=eps_security, verbose=verbose)
+        ordered_corners = order_points(corners)
+        max_width_perspective, max_height_perspective = compute_destination_size(ordered_corners)
+        destination_corners = np.array([
+            [0, 0],
+            [max_width_perspective - 1, 0],
+            [max_width_perspective - 1, max_height_perspective - 1],
+            [0, max_height_perspective - 1]], dtype="float32")
+        M = cv2.getPerspectiveTransform(ordered_corners, destination_corners)
+
+    corrected_image = cv2.warpPerspective(image, M, (max_width_perspective, max_height_perspective), flags=cv2.INTER_LINEAR)
+    
+    return corrected_image,M,max_width_perspective, max_height_perspective
 
 
 ##################################################################################################
@@ -513,10 +516,10 @@ def grid1_coord2grid2_coord(coord,grid1,grid2):
 def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255,255,255]),
         thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0]), min_size=5000, grid_size=200):
     
-    #image = get_image_from_camera(cam,False) # camera calibration inside
+    image = get_image_from_camera(cam,False) # camera calibration inside
 
-    #image = correct_perspective(image, sigma=sigma, epsilon=epsilon) TOBEREMOVED
-    image=cv2.imread("goodimg.jpg")
+    image,mat_persp,max_width_persp, max_height_persp = correct_perspective(image, sigma=sigma, epsilon=epsilon,get_matrix=True)
+    #image=cv2.imread("goodimg.jpg")
 
     image_colored ,obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center= full_detection_cnt_centroid(image, thresh_Thymio, thresh_obstacle, thresh_goal, min_size)
 
@@ -533,7 +536,7 @@ def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255
     #Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
     path, explored, cost_map = a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio_xytheta[1],Thymio_xytheta[0]]),image,grid), grid1_coord2grid2_coord(np.array([Goal_center[1],Goal_center[0]]),image,grid))
 
-    return image, grid, Thymio_xytheta, Goal_center, path, Thymio_detected, Thymio_nose, obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Thymio_cnt, Thymio_size, Thymio_nose.reshape(2,1)
+    return image, grid, Thymio_xytheta, Goal_center, path, Thymio_detected, Thymio_nose, obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Thymio_cnt, Thymio_size, Thymio_nose.reshape(2,1), mat_persp,max_width_persp, max_height_persp
 
 def Thymio_position(img, thresh_Thymio, Thymio_size):
 
@@ -548,6 +551,7 @@ def Thymio_position(img, thresh_Thymio, Thymio_size):
     white_mask=filter_big_blobs(white_mask,Thymio_size*1.5)
 
     contours, _ = cv2.findContours(white_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
     cnt = contours[0]  # biggest contour
     Thymio_mask=np.zeros_like(white_mask,dtype=np.uint8)
@@ -558,10 +562,11 @@ def Thymio_position(img, thresh_Thymio, Thymio_size):
         Thymio_x=-1000
         Thymio_y=-1000
         Thymio_theta=0
+        Thymio_xytheta=np.array([[Thymio_x],[Thymio_y],[Thymio_theta]])
         Thymio_nose=np.array([-1100,-1100])
         Thymio_detected=False
         print("Thymio not detected")
-        return Thymio_x, Thymio_y, Thymio_theta, Thymio_detected, Thymio_size, Thymio_nose.reshape(2,1), cnt
+        return Thymio_xytheta, Thymio_detected, Thymio_size, Thymio_nose.reshape(2,1), cnt
     else: Thymio_detected=True
     #Get Centroid
     M = cv2.moments(Thymio_mask)
@@ -587,13 +592,26 @@ def Thymio_position(img, thresh_Thymio, Thymio_size):
     Thymio_xytheta=np.array([[Thymio_x],[Thymio_y],[Thymio_theta]])
     return Thymio_xytheta, Thymio_detected, Thymio_size, Thymio_nose.reshape(2,1), cnt
 
-def update_vision(cam, sigma = 5, epsilon = 0.01, T_WL=190, Thymio_size=-1):
+def update_vision(cam, sigma = 5, epsilon = 0.01,mat_persp=0,max_width_persp=0, max_height_persp=0, thresh_Thymio=np.array([190,190,190,255,255,255]), Thymio_size=-1):
     
-    image = get_image_from_camera(cam)
-    
-    image = correct_perspective(image, sigma=sigma, epsilon=epsilon)
+    image = get_image_from_camera(cam,False) # camera calibration inside
+
+    image,_,_,_ = correct_perspective(image, sigma=sigma, epsilon=epsilon,M=mat_persp,max_width_perspective=max_width_persp, max_height_perspective=max_height_persp,get_matrix=False)
 
     # detection thymio
-    Thymio_xytheta, Thymio_detected,Thymio_size, Thymio_nose, Thymio_cnt = Thymio_position(image, T_WL, Thymio_size)
+    Thymio_xytheta, Thymio_detected, Thymio_size, Thymio_nose, Thymio_cnt = Thymio_position(image, thresh_Thymio, Thymio_size)
 
-    return  Thymio_xytheta, Thymio_detected 
+    return image, Thymio_xytheta, Thymio_detected, Thymio_size, Thymio_nose, Thymio_cnt 
+
+def draw_cnt_image(image,goal_cnt,obstacle_cnt,obstacle_cnt_expnded,Thymio_cnt,path_img,Thymio_xytheta,Thymio_nose,c_goal):
+    image_cnt=image.copy()
+    cv2.drawContours(image_cnt, goal_cnt, -1, (0,255,0), 4)
+    cv2.drawContours(image_cnt, obstacle_cnt, -1, (0,0,255), 4)
+    cv2.drawContours(image_cnt, obstacle_cnt_expnded, -1, (0,100,255), 4)
+    cv2.drawContours(image_cnt, Thymio_cnt, -1, (229,204,255), 4)
+    cv2.polylines(image_cnt, [path_img.T.reshape(-1,1,2)], isClosed=False, color=(255, 0, 0), thickness=4)
+
+    #Update the image with Thymio contour and orientation
+    cv2.line(image_cnt, Thymio_xytheta[:2,0].astype(np.int32), Thymio_nose[:2,0].astype(np.int32), (229,204,255), thickness=2) #orientation
+    cv2.circle(image_cnt,c_goal.flatten(), 10, (153,255,51), -1)
+    return image_cnt
