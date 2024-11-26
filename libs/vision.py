@@ -788,7 +788,7 @@ def Thymio_position(img, thresh_Thymio, Thymio_size):
     cX_nose = int(M["m10"] / M["m00"])
     cY_nose = int(M["m01"] / M["m00"])
 
-    Thymio_theta=np.atan2(cY_nose-Thymio_y,cX_nose-Thymio_x)
+    Thymio_theta=np.arctan2(cY_nose-Thymio_y,cX_nose-Thymio_x)
     Thymio_nose=np.array([cX_nose,cY_nose])
 
     Thymio_xytheta=np.array([[Thymio_x],[Thymio_y],[Thymio_theta]])

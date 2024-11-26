@@ -3,7 +3,7 @@ import cv2
 import matplotlib.pyplot as plt 
 from ipywidgets import interact, FloatSlider, IntSlider
 from skimage import feature
-from libs.vision import largest_cc, find_corners, filter_small_red, find_nose_corners, get_midpoint, get_slope_intercept, get_centroids, get_orientation
+from libs.vision import largest_cc, find_corners,  find_nose_corners, get_midpoint, get_slope_intercept, get_centroids, get_orientation
 
 from libs.vision import BLACK, WHITE, RED, GREEN, BLUE, START, ROBOT, GOAL, OBSTACLE, BACKGROUND
 
