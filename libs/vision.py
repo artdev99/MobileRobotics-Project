@@ -261,23 +261,65 @@ def compute_destination_size(ordered_corners):
 
     return max_width, max_height
 
-def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01,M=0,max_width_perspective=0, max_height_perspective=0,get_matrix=True, eps_security=True, verbose=False) -> np.ndarray:
+def find_aruco_corners_size(image):
+
+    # Initialize the detector parameters
+    parameters = cv2.aruco.DetectorParameters_create()
+    # Select the ArUco dictionary
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
+
+    # Detect the markers
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(image, aruco_dict, parameters=parameters)
+
+    if len(corners)<4:
+        print(f"Only{corners.shape[0]}")
+        return np.zeros((2,4)),-1
+    
+    inner_corners = []
+
+    # Define the order of markers: top-left, bottom-left, bottom-right, top-right
+    marker_order = [0, 1, 2, 3]
+    aruco_corner = [2, 1, 0, 3]  # Bottom-right, top-right, top-left, bottom-left of each aruco
+
+    for marker_id, corner_pos in zip(marker_order, aruco_corner):
+
+        idx = np.where(ids == marker_id)[0,0]
+        # Get the inner corner
+        inner_corners.append(corners[idx][0,corner_pos,:])
+    size_aruco=[]
+    for i in range(4):
+        side_lengths = [
+            np.linalg.norm(corners[i][0,0,:] - corners[i][0,1,:]),  # Top side
+            np.linalg.norm(corners[i][0,1,:] - corners[i][0,2,:]),  # Right side
+            np.linalg.norm(corners[i][0,2,:] - corners[i][0,3,:]),  # Bottom side
+            np.linalg.norm(corners[i][0,3,:] - corners[i][0,0,:])   # Left side
+        ]
+        size_aruco.append(np.mean(side_lengths))
+    return inner_corners, np.mean(size_aruco)
+
+
+
+def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01,M=0,max_width_perspective=0, max_height_perspective=0,get_matrix=True,aruco=True, eps_security=True, verbose=False) -> np.ndarray:
+    size_aruco=-1
     if get_matrix:
-        edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
-        mask = largest_cc(edges)
-        corners = find_corners(mask, epsilon=epsilon, eps_security=eps_security, verbose=verbose)
-        ordered_corners = order_points(corners)
-        max_width_perspective, max_height_perspective = compute_destination_size(ordered_corners)
-        destination_corners = np.array([
-            [0, 0],
-            [max_width_perspective - 1, 0],
-            [max_width_perspective - 1, max_height_perspective - 1],
-            [0, max_height_perspective - 1]], dtype="float32")
-        M = cv2.getPerspectiveTransform(ordered_corners, destination_corners)
+        if aruco:
+            ordered_corners, size_aruco=find_aruco_corners_size(image)
+        else:
+            edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
+            mask = largest_cc(edges)
+            corners = find_corners(mask, epsilon=epsilon, eps_security=eps_security, verbose=verbose)
+            ordered_corners = order_points(corners)
+            max_width_perspective, max_height_perspective = compute_destination_size(ordered_corners)
+            destination_corners = np.array([
+                [0, 0],
+                [max_width_perspective - 1, 0],
+                [max_width_perspective - 1, max_height_perspective - 1],
+                [0, max_height_perspective - 1]], dtype="float32")
+            M = cv2.getPerspectiveTransform(ordered_corners, destination_corners)
 
     corrected_image = cv2.warpPerspective(image, M, (max_width_perspective, max_height_perspective), flags=cv2.INTER_LINEAR)
     
-    return corrected_image,M,max_width_perspective, max_height_perspective
+    return corrected_image,M,max_width_perspective, max_height_perspective, size_aruco
 
 
 ##################################################################################################
@@ -720,7 +762,7 @@ def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255
     
     image = get_image_from_camera(cam,False) # camera calibration inside
 
-    image,mat_persp,max_width_persp, max_height_persp = correct_perspective(image, sigma=sigma, epsilon=epsilon,get_matrix=True)
+    image,mat_persp,max_width_persp, max_height_persp,size_aruco = correct_perspective(image, sigma=sigma, epsilon=epsilon,get_matrix=True,aruco=True)
     #image=cv2.imread("goodimg.jpg")
 
     image_colored ,obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center= full_detection_cnt_centroid(image, thresh_Thymio, thresh_obstacle, thresh_goal, min_size)
@@ -738,7 +780,7 @@ def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255
     #Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
     path, explored, cost_map = a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio_xytheta[1],Thymio_xytheta[0]]),image,grid), grid1_coord2grid2_coord(np.array([Goal_center[1],Goal_center[0]]),image,grid))
 
-    return image, grid, Thymio_xytheta, Goal_center, path, Thymio_detected, Thymio_nose, obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Thymio_cnt, Thymio_size, Thymio_nose.reshape(2,1), mat_persp,max_width_persp, max_height_persp
+    return image, grid, Thymio_xytheta, Goal_center, path, Thymio_detected, Thymio_nose, obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Thymio_cnt, Thymio_size, Thymio_nose.reshape(2,1), mat_persp,max_width_persp, max_height_persp, size_aruco
 
 def Thymio_position(img, thresh_Thymio, Thymio_size):
 
@@ -798,7 +840,7 @@ def update_vision(cam, sigma = 5, epsilon = 0.01,mat_persp=0,max_width_persp=0, 
     
     image = get_image_from_camera(cam,False) # camera calibration inside
 
-    image,_,_,_ = correct_perspective(image, sigma=sigma, epsilon=epsilon,M=mat_persp,max_width_perspective=max_width_persp, max_height_perspective=max_height_persp,get_matrix=False)
+    image,_,_,_,_ = correct_perspective(image, sigma=sigma, epsilon=epsilon,M=mat_persp,max_width_perspective=max_width_persp, max_height_perspective=max_height_persp,get_matrix=False)
 
     # detection thymio
     Thymio_xytheta, Thymio_detected, Thymio_size, Thymio_nose, Thymio_cnt = Thymio_position(image, thresh_Thymio, Thymio_size)
