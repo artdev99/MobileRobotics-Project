@@ -1,14 +1,17 @@
 import math
 
+#TO DO : What are the units of x and y (the parameters) ? If not in meter -> fix units
+
 def motion_control(x,y,theta,x_goal,y_goal):
 
-    R_WHEEL = 4.3 #radius of the wheels
-    L = 9.2 #wheel axis length
-    DISTANCE_THRESHOLD = 1 #what is the unity of x and x_goal ?
-    ANGLE_THRESHOLD = 0.1 #radians
-    SPEED_LIMIT = 500
+    R_WHEEL = 4.3 * 10^-2                    #wheels radius [m]
+    L_AXIS = 9.2 * 10^-2                     #wheel axis length [m]
+    DISTANCE_THRESHOLD = 3*10^-2             #margin to consider goal reached [m]
+    ANGLE_THRESHOLD = 0.1                    #margin to consider goal reached [rad]
+    SPEED_LIMIT = 500                        #PWM
+    SCALING_FACTOR = 500//(20*10^-2/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 20cm/s
 
-    def normalize_angle(angle): #restricts angle between -pi and pi
+    def normalize_angle(angle): #restricts angle [rad] between -pi and pi
         while angle > math.pi:
             angle -= 2 * math.pi
         while angle < -math.pi:
@@ -16,7 +19,7 @@ def motion_control(x,y,theta,x_goal,y_goal):
         return angle
 
     def goal_reached(distance_to_goal,delta_angle):
-        return ((distance_to_goal<DISTANCE_THRESHOLD) and (abs(delta_angle)<DISTANCE_THRESHOLD))
+        return ((distance_to_goal<DISTANCE_THRESHOLD) and (abs(delta_angle)<ANGLE_THRESHOLD))
 
     def limit_speed(v):
         if(v>SPEED_LIMIT) :
@@ -26,27 +29,27 @@ def motion_control(x,y,theta,x_goal,y_goal):
         return v
     
     #To do : Tune k by testing
-    k_rho = 1.0 # To control translational velocity
-    k_alpha = 3.0 # To control rotational velocity 
-    k_beta = -0.5 # Damping term (to stabilize the robot's orientation when reaching the goal)
+    k_rho = 1.0     #controls translational velocity
+    k_alpha = 3.0   #controls rotational velocity 
+    k_beta = -0.5   #damping term (to stabilize the robot's orientation when reaching the goal)
 
-    delta_x = x_goal - x
-    delta_y = y_goal - y
+    delta_x = x_goal - x #[m]
+    delta_y = y_goal - y #[m]
 
-    distance_to_goal =math.sqrt( (delta_x)**2 + (delta_y)**2 )
-    delta_angle = normalize_angle(math.atan2(delta_y, delta_x) - theta) #difference between the robot's orientation and the direction of the goal
+    distance_to_goal =math.sqrt( (delta_x)**2 + (delta_y)**2 )          #[m]
+    delta_angle = normalize_angle(math.atan2(delta_y, delta_x) - theta) #difference between the robot's orientation and the direction of the goal [rad]
     #print("IN: d=", distance_to_goal, " angle=",delta_angle)
 
-    v = k_rho*distance_to_goal #translational velocity
-    omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta) #rotational velocity
+    v = k_rho*distance_to_goal                                  #translational velocity [m/s]
+    omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta)  #rotational velocity [rad/s]
     
     #Calculate motor speed
-    w_ml = (v+omega*L)//R_WHEEL #rad/s 
-    w_mr = (v-omega*L)//R_WHEEL
+    w_ml = (v+omega*L_AXIS)//R_WHEEL #[rad/s]
+    w_mr = (v-omega*L_AXIS)//R_WHEEL #[rad/s]
     #print("IN: w_ml, w_mr : ", w_ml, w_mr)
     
-    v_ml = w_ml*200//math.pi #PWM
-    v_mr = w_mr*200//math.pi
+    v_ml = w_ml*SCALING_FACTOR #PWM
+    v_mr = w_mr*SCALING_FACTOR #PWM
     #print("IN: v_ml, v_mr : ", v_ml, v_mr)
 
     if(goal_reached(distance_to_goal,delta_angle)):
@@ -54,15 +57,12 @@ def motion_control(x,y,theta,x_goal,y_goal):
         v_mr=0
         print("goal reached !")
     
-    v_ml=v_ml//80
-    v_mr=v_mr//80
-
     v_ml = limit_speed(v_ml)
     v_mr = limit_speed(v_mr)
     print("IN: v_ml, v_mr : ", v_ml, v_mr)
     
-    v_ml = int(v_ml)  # Ensure integer type
-    v_mr = int(v_mr)  # Ensure integer type
+    v_ml = int(v_ml)  #ensure integer type
+    v_mr = int(v_mr)  #ensure integer type
 
     v_m = {
         "motor.left.target": [v_ml],
