@@ -26,8 +26,8 @@ def motion_control(x,y,theta,x_goal,y_goal):
         return v
     
     #To do : Tune k by testing
-    k_rho = 1.0 # To control linear velocity
-    k_alpha = 3.0 # To control angular velocity 
+    k_rho = 1.0 # To control translational velocity
+    k_alpha = 3.0 # To control rotational velocity 
     k_beta = -0.5 # Damping term (to stabilize the robot's orientation when reaching the goal)
 
     delta_x = x_goal - x
@@ -37,8 +37,8 @@ def motion_control(x,y,theta,x_goal,y_goal):
     delta_angle = normalize_angle(math.atan2(delta_y, delta_x) - theta) #difference between the robot's orientation and the direction of the goal
     #print("IN: d=", distance_to_goal, " angle=",delta_angle)
 
-    v = k_rho*distance_to_goal #linear velocity
-    omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta) #angular velocity
+    v = k_rho*distance_to_goal #translational velocity
+    omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta) #rotational velocity
     
     #Calculate motor speed
     w_ml = (v+omega*L)//R_WHEEL #rad/s 
