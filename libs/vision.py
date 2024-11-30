@@ -91,8 +91,8 @@ def get_image_from_camera(cam, distortion=False, alpha=1, var_treshold=2000):
     if not ret:
         print("Failed to capture image")
         return None
-    if camera_obstructed(frame, var_treshold):
-        return None
+    #if camera_obstructed(frame, var_treshold):
+    #    return None
     if distortion:
         frame = correct_camera_distortion(frame, alpha)
     return frame
@@ -264,26 +264,26 @@ def compute_destination_size(ordered_corners):
 def find_aruco_corners_size(image):
 
     # Initialize the detector parameters
-    parameters = cv2.aruco.DetectorParameters_create()
+    parameters = cv2.aruco.DetectorParameters()
     # Select the ArUco dictionary
-    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
-
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
+    
     # Detect the markers
-    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(image, aruco_dict, parameters=parameters)
-
+    gray_img=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
     if len(corners)<4:
-        print(f"Only{corners.shape[0]}")
+        print(f"Only {len(corners)} corners")
         return np.zeros((2,4)),-1
     
     inner_corners = []
 
     # Define the order of markers: top-left, bottom-left, bottom-right, top-right
-    marker_order = [0, 1, 2, 3]
+    marker_order = [0, 1, 2, 10]
     aruco_corner = [2, 1, 0, 3]  # Bottom-right, top-right, top-left, bottom-left of each aruco
 
     for marker_id, corner_pos in zip(marker_order, aruco_corner):
 
-        idx = np.where(ids == marker_id)[0,0]
+        idx = np.where(ids == marker_id)[0][0]
         # Get the inner corner
         inner_corners.append(corners[idx][0,corner_pos,:])
     size_aruco=[]
@@ -295,7 +295,7 @@ def find_aruco_corners_size(image):
             np.linalg.norm(corners[i][0,3,:] - corners[i][0,0,:])   # Left side
         ]
         size_aruco.append(np.mean(side_lengths))
-    return inner_corners, np.mean(size_aruco)
+    return np.array(inner_corners), np.mean(size_aruco)
 
 
 
@@ -303,19 +303,19 @@ def correct_perspective(image: np.ndarray, sigma=5, epsilon=0.01,M=0,max_width_p
     size_aruco=-1
     if get_matrix:
         if aruco:
-            ordered_corners, size_aruco=find_aruco_corners_size(image)
+            corners, size_aruco=find_aruco_corners_size(image)
         else:
             edges = feature.canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), sigma=sigma)
             mask = largest_cc(edges)
             corners = find_corners(mask, epsilon=epsilon, eps_security=eps_security, verbose=verbose)
-            ordered_corners = order_points(corners)
-            max_width_perspective, max_height_perspective = compute_destination_size(ordered_corners)
-            destination_corners = np.array([
-                [0, 0],
-                [max_width_perspective - 1, 0],
-                [max_width_perspective - 1, max_height_perspective - 1],
-                [0, max_height_perspective - 1]], dtype="float32")
-            M = cv2.getPerspectiveTransform(ordered_corners, destination_corners)
+        ordered_corners = order_points(corners)
+        max_width_perspective, max_height_perspective = compute_destination_size(ordered_corners)
+        destination_corners = np.array([
+            [0, 0],
+            [max_width_perspective - 1, 0],
+            [max_width_perspective - 1, max_height_perspective - 1],
+            [0, max_height_perspective - 1]], dtype="float32")
+        M = cv2.getPerspectiveTransform(ordered_corners, destination_corners)
 
     corrected_image = cv2.warpPerspective(image, M, (max_width_perspective, max_height_perspective), flags=cv2.INTER_LINEAR)
     
@@ -327,20 +327,12 @@ def full_detection_cnt_centroid(image: np.ndarray, thresh_Thymio, thresh_obstacl
     thresholded_img = np.zeros_like(image)
 
     ##Find Thymio (start)
-    Thymio_mask = cv2.inRange(image, thresh_Thymio[:3], thresh_Thymio[3:6])
-    contours, _ = cv2.findContours(Thymio_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    cnt = contours[0]  # biggest contour
-    filled_mask = np.zeros_like(Thymio_mask)
-    Thymio_mask=cv2.drawContours(filled_mask, [cnt], -1, 255, thickness=cv2.FILLED)
-    thresholded_img[Thymio_mask==255] = [255, 255, 255]
-
-    # Find the minimum enclosing circle
-    (_, _), radius = cv2.minEnclosingCircle(cnt)
-    radius = int(np.ceil(radius)) # exact radius was too small
-
+    Thymio_xytheta, Thymio_detected, radius=Thymio_position_aruco_init(image)
+    if not Thymio_detected:
+        raise ValueError("Thymio not detected")
+    
     # Find Obstacles
-    obstacle_mask=255*np.ones_like(Thymio_mask, dtype=np.uint8)
+    obstacle_mask=255*np.ones_like(image, dtype=np.uint8)
     for i in range(thresh_obstacle.shape[0]):
         temp_mask = cv2.inRange(image, thresh_obstacle[i,:3], thresh_obstacle[i,3:6])
         obstacle_mask = cv2.bitwise_and(obstacle_mask, temp_mask)
@@ -350,7 +342,7 @@ def full_detection_cnt_centroid(image: np.ndarray, thresh_Thymio, thresh_obstacl
 
     distance = cv2.distanceTransform(~obstacle_mask, cv2.DIST_L2, 5)
 
-    # Threshold to expand the obstacle by a fixed distance (e.g., 10 pixels)
+    # Expand the obstacle by Thymio's radius
     expanded_obstacle_mask = (distance < radius) * 255
 
     expanded_obstacle_mask, obstacle_cnt_expnded = fill_holes(expanded_obstacle_mask)
@@ -358,7 +350,8 @@ def full_detection_cnt_centroid(image: np.ndarray, thresh_Thymio, thresh_obstacl
 
 
     
-    
+    cv2.imshow("365",image)
+    cv2.waitKey(10)
     # Find Goal
     goal_mask = cv2.inRange(image, thresh_goal[:3], thresh_goal[3:6])
 
@@ -373,7 +366,7 @@ def full_detection_cnt_centroid(image: np.ndarray, thresh_Thymio, thresh_obstacl
     Goal_y = int(M["m01"] / M["m00"])
     Goal_center=np.array([Goal_x,Goal_y]).reshape(2,1)
 
-    return thresholded_img,obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center
+    return thresholded_img,obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center, Thymio_xytheta[:-1,0]
 
 def filter_small_blobs(red_mask: np.ndarray, min_size: int) -> np.ndarray:
         if min_size == 1:
@@ -758,11 +751,11 @@ def grid1_coord2grid2_coord(coord,grid1,grid2):
     return np.int32(np.rint(coord_grid))
 
 def init(cam, sigma = 5, epsilon = 0.01, thresh_Thymio=np.array([190,190,190,255,255,255]),
-        thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0]), min_size=5000, grid_size=200):
+        thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0]), min_size=5000, grid_size=200,aruco=True):
     
     image = get_image_from_camera(cam,False) # camera calibration inside
 
-    image,mat_persp,max_width_persp, max_height_persp,size_aruco = correct_perspective(image, sigma=sigma, epsilon=epsilon,get_matrix=True,aruco=True)
+    image,mat_persp,max_width_persp, max_height_persp,size_aruco = correct_perspective(image, sigma=sigma, epsilon=epsilon,get_matrix=True,aruco=aruco)
     #image=cv2.imread("goodimg.jpg")
 
     image_colored ,obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center= full_detection_cnt_centroid(image, thresh_Thymio, thresh_obstacle, thresh_goal, min_size)
@@ -859,3 +852,79 @@ def draw_cnt_image(image,goal_cnt,obstacle_cnt,obstacle_cnt_expnded,Thymio_cnt,p
     cv2.line(image_cnt, Thymio_xytheta[:2,0].astype(np.int32), Thymio_nose[:2,0].astype(np.int32), (229,204,255), thickness=2) #orientation
     cv2.circle(image_cnt,c_goal.flatten(), 10, (153,255,51), -1)
     return image_cnt
+
+
+
+def Thymio_position_aruco_init(img):
+    Thymio_ID=9
+    Thymio_aruco_size=38 #mm
+    Thymio_radius_mm=70 #mm
+    # Initialize the detector parameters
+    parameters = cv2.aruco.DetectorParameters()
+    # Select the ArUco dictionary
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
+    
+    # Detect the markers
+    gray_img=cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
+
+    if Thymio_ID not in ids:
+        return -1*np.ones((3,1)),False #Tymio not detected
+    
+
+    idx = np.where(ids == Thymio_ID)[0][0] #Thymio's aruco ID is 10
+    aruco_corners=np.array(corners[idx][0,:,:])
+
+    #Thymio's center:
+    Thymio_x,Thymio_y=aruco_corners.mean(axis=0)
+
+    #Thymio's angle
+    top_edge=aruco_corners[1,:]-aruco_corners[0,:]
+    bottom_edge=aruco_corners[2,:]-aruco_corners[3,:]
+    angle = np.mean([np.arctan2(bottom_edge[1], bottom_edge[0]), 
+                    np.arctan2(top_edge[1], top_edge[0])])
+
+    #Thymio size
+    side_lengths = [
+            np.linalg.norm(aruco_corners[0,:] - aruco_corners[1,:]),  # Top side
+            np.linalg.norm(aruco_corners[1,:] - aruco_corners[2,:]),  # Right side
+            np.linalg.norm(aruco_corners[2,:] - aruco_corners[3,:]),  # Bottom side
+            np.linalg.norm(aruco_corners[3,:] - aruco_corners[0,:])   # Left side
+        ]
+    Thymio_radius=Thymio_radius_mm*np.mean(side_lengths)/Thymio_aruco_size
+
+
+    Thymio_xytheta = np.array([Thymio_x,Thymio_y,angle])
+    return Thymio_xytheta, True, Thymio_radius
+
+
+def Thymio_position_aruco(img):
+    Thymio_ID=9
+    # Initialize the detector parameters
+    parameters = cv2.aruco.DetectorParameters()
+    # Select the ArUco dictionary
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
+    
+    # Detect the markers
+    gray_img=cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
+
+    if Thymio_ID not in ids:
+        return -1*np.ones((3,1)),False #Tymio not detected
+    
+
+    idx = np.where(ids == Thymio_ID)[0][0] #Thymio's aruco ID is 10
+    aruco_corners=np.array(corners[idx][0,:,:])
+
+    #Thymio's center:
+    Thymio_x,Thymio_y=aruco_corners.mean(axis=0)
+
+    #Thymio's angle
+    top_edge=aruco_corners[1,:]-aruco_corners[0,:]
+    bottom_edge=aruco_corners[2,:]-aruco_corners[3,:]
+    angle = np.mean([np.arctan2(bottom_edge[1], bottom_edge[0]), 
+                    np.arctan2(top_edge[1], top_edge[0])])
+
+    Thymio_xytheta = np.array([Thymio_x,Thymio_y,angle])
+    return Thymio_xytheta, True
+
