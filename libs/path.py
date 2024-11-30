@@ -79,34 +79,33 @@ def find_keypoints(path):
     def find_rotation(dir_previous,dir_next):
         det = dir_previous[0] * dir_next[1] - dir_previous[1] * dir_next[0]
         dot_product = dir_previous[0] * dir_next[0] + dir_previous[1] * dir_next[1]
-        theta = math.atan2(det, dot_product) #oriented angle, in rad
+        theta = math.atan2(det, dot_product) #angle between the two directions [rad]
         return theta
 
-    #ANGLE_THRESHOLD = 0.15 #rad
-    ANGLE_THRESHOLD = math.radians(40) #converts degrees to rad
-    COUNTER_THRESHOLD = 3 #max number of steps between keypoints
-    STEP = 3
+    ANGLE_THRESHOLD = math.radians(40) #threshold under which changes of directions are ignored [rad]
+    STEP = 3                           #step (in number of cells) between each cell we study
+    COUNTER_THRESHOLD = 3              #max number of steps between keypoints
         
     if len(path) < 3 :
         return path
 
     keypoints = [] 
-    keypoints.append(path[0])
+    keypoints.append(path[0]) #beginning of the path
     counter = 1
 
-    for i in range(STEP, len(path)-STEP, STEP): #beginning, max, step
-        previous = path[i-STEP]
-        current = path[i]
-        next = path[i+STEP]
+    for i in range(STEP, len(path)-STEP, STEP):
+        previous = path[i-STEP] #previous cell
+        current = path[i]       #current cell
+        next = path[i+STEP]     #next cell
 
         #direction vectors
         dir_previous = (current[0] - previous[0], current[1] - previous[1])
         dir_next = (next[0] - current[0], next[1] - current[1])
         
-        if (abs(find_rotation(dir_previous,dir_next)) > ANGLE_THRESHOLD): 
+        if (abs(find_rotation(dir_previous,dir_next)) > ANGLE_THRESHOLD): #significant change of direction
             keypoints.append(current)
             counter = 1
-        elif (counter >= COUNTER_THRESHOLD): #ensures there isn't too much space between keypoints (so we avoid accumulating small changes of directions)
+        elif (counter >= COUNTER_THRESHOLD): #ensures there isn't too much space between keypoints (so we avoid accumulating ignored small changes of directions)
             keypoints.append(current)
             counter = 1
         else:
