@@ -9,7 +9,7 @@ def motion_control(x,y,theta,x_goal,y_goal):
     DISTANCE_THRESHOLD = 3*10^-2             #margin to consider goal reached [m]
     ANGLE_THRESHOLD = 0.1                    #margin to consider goal reached [rad]
     SPEED_LIMIT = 500                        #PWM
-    SCALING_FACTOR = 500//(20*10^-2/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 20cm/s
+    SCALING_FACTOR = 500/(20*10^-2/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 20cm/s
 
     def normalize_angle(angle): #restricts angle [rad] between -pi and pi
         while angle > math.pi:
@@ -44,8 +44,8 @@ def motion_control(x,y,theta,x_goal,y_goal):
     omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta)  #rotational velocity [rad/s]
     
     #Calculate motor speed
-    w_ml = (v+omega*L_AXIS)//R_WHEEL #[rad/s]
-    w_mr = (v-omega*L_AXIS)//R_WHEEL #[rad/s]
+    w_ml = (v+omega*L_AXIS)/R_WHEEL #[rad/s]
+    w_mr = (v-omega*L_AXIS)/R_WHEEL #[rad/s]
     #print("IN: w_ml, w_mr : ", w_ml, w_mr)
     
     v_ml = w_ml*SCALING_FACTOR #PWM
