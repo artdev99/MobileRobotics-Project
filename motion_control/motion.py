@@ -1,6 +1,17 @@
 import math
 
-#TO DO : What are the units of x and y (the parameters) ? If not in cm -> fix units
+def pixel_to_cm(value_pixel, aruco_size):
+    ARUCO_SIZE_CM = 7 #[cm]
+    value_cm = value_pixel*ARUCO_SIZE_CM/aruco_size 
+    return value_cm   #[cm]
+
+def adjust_units(Thymio_xytheta, c_goal, aruco_size):
+    x_cm = pixel_to_cm((Thymio_xytheta.flatten())[0], aruco_size)
+    y_cm = pixel_to_cm((Thymio_xytheta.flatten())[1], aruco_size)
+    theta_rad = Thymio_xytheta.flatten()[2]
+    x_goal_cm=pixel_to_cm((c_goal.flatten())[0], aruco_size)
+    y_goal_cm=pixel_to_cm((c_goal.flatten())[1], aruco_size)
+    return x_cm, y_cm, theta_rad, x_goal_cm, y_goal_cm
 
 def motion_control(x,y,theta,x_goal,y_goal):
 
