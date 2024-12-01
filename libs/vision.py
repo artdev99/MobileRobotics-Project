@@ -681,7 +681,7 @@ def get_orientation(nose, centroid):
 
    
 ##################################################################################################
-from path import a_star_search
+from libs.path import a_star_search
 
 def grid1_coord2grid2_coord(coord,grid1,grid2):
     coord_grid=np.copy(coord)
