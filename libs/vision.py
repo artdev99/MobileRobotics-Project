@@ -783,7 +783,7 @@ def draw_cnt_image(image,goal_cnt,obstacle_cnt,obstacle_cnt_expnded,path_img,Thy
     cv2.circle(image_cnt,c_goal.flatten(), 10, (255,255,0), -1)
 
     if Thymio_detected:
-        Thymio_nose=2*aruco_size*np.array([np.cos(Thymio_xytheta[2]),np.sin(Thymio_xytheta[2])])
+        Thymio_nose=1.5*aruco_size*np.array([np.cos(Thymio_xytheta[2]),np.sin(Thymio_xytheta[2])])
         Thymio_nose=Thymio_nose+Thymio_xytheta[:2]
         cv2.arrowedLine(image_cnt, Thymio_xytheta[:2].astype(int),Thymio_nose.astype(int) , (153, 255, 51), 2, tipLength=0.2)
     return image_cnt

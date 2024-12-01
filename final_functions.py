@@ -277,3 +277,22 @@ def find_keypoints(path,ANGLE_THRESHOLD=np.radians(40),STEP = 3,COUNTER_THRESHOL
     keypoints.append(path[len(path) - 1])  #last point of the path is the true final goal
     
     return keypoints
+
+
+def draw_on_image(camera,Thymio,path_img):
+    image_cnt=camera.perspimage.copy()
+    cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0,255,0), 3)
+    cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
+    cv2.drawContours(image_cnt, camera.obstacle_cnt_expnded, -1, (0,100,255), 3)
+    cv2.polylines(image_cnt, [path_img.T.reshape(-1,1,2)], isClosed=False, color=(255, 0, 0), thickness=3)
+    #if the line below oes crazy remove the .T TBD
+    cv2.polylines(image_cnt, [Thymio.keypoints.T.reshape(-1,1,2)], isClosed=False, color=(255, 255, 151), thickness=2) 
+    cv2.circle(image_cnt,camera.c_goal.flatten(), 10, (0,255,0), -1)
+
+    if Thymio.Thymio_detected:
+        Thymio_nose=1.5*camera.size_aruco*np.array([np.cos(Thymio.xytheta_meas[2]),np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
+        Thymio_nose=Thymio_nose+Thymio.xytheta_meas[:2]
+        cv2.arrowedLine(image_cnt, Thymio.xytheta_meas[:2].astype(int),Thymio_nose.astype(int) , (255, 0, 255), 2, tipLength=0.2)
+    #TBD add Thymio estimated + circle for variance (and two small arrows for angle variance?)
+    cv2.imshow('Camera View', image_cnt)
+    cv2.waitKey(1)

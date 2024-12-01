@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 from tdmclient import ClientAsync
-import time
 from final_classes import *
 from final_functions import *
 
@@ -16,7 +15,7 @@ min_size=5000 #minimum blob size
 thresh_obstacle=np.array([0,0,120,0,0,140]) #BGR
 thresh_goal=np.array([0,120,0,0,140,0]) #BGR
 Thymio_id=9
-grid_size=300 #blocks? TBD blovks or pixels?
+grid_size=300 #blocks? TBD numbers of blocks or pixels?
 ANGLE_THRESHOLD = np.radians(40)   #threshold under which changes of directions are ignored [rad]
 STEP = 3                           #step (in number of cells) between each cell we study
 COUNTER_THRESHOLD = 3              #max number of steps between keypoints
@@ -49,7 +48,12 @@ with ClientAsync() as client:
                     grid=discretize_image_eff(cam.thresholded_image,grid_size)
                     #Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
                     path, _, _ = a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio.xytheta_est[1],Thymio.xytheta_est[0]]),cam.persp_image,grid), grid1_coord2grid2_coord(np.array([cam.goal_center[1],cam.goal_center[0]]),cam.persp_image,grid),do_plot)
-                    keypoints=find_keypoints(path,ANGLE_THRESHOLD,STEP,COUNTER_THRESHOLD)
+                    
+                    # Convert path coordinates for plotting
+                    path_img = grid1_coord2grid2_coord(path, grid, cam.perspimage)
+                    path_img = path_img[::-1]
+
+                    keypoints=find_keypoints(path_img,ANGLE_THRESHOLD,STEP,COUNTER_THRESHOLD)
                     keypoints=keypoints[np.linalg.norm(keypoints-Thymio.xytheta_est[:2],axis=1)<keypoint_dist_thresh,:] #Keep only far keypoints
                     Thymio.target_keypoint=Thymio.keypoints[0,:]
                     Thymio.keypoints=keypoints[1:,:]
@@ -73,12 +77,12 @@ with ClientAsync() as client:
                     Thymio.local_avoidance=True
                     #TBD Thymio.local avoidance to update target motor speed
                     #TBD await set speed (thymio.speed)
-                    #TBD call update plot function
+                    draw_on_image(cam,Thymio,path_img)
                     continue
                 else:
                     if Thymio.local_avoidance:
                         Path_planning=True
-                        #TBD update plots
+                        draw_on_image(cam,Thymio,path_img)
                         continue
                 #Target Achieved?
                     else:
@@ -91,7 +95,7 @@ with ClientAsync() as client:
                                 Thymio.keypoints=Thymio.keypoints[1:,:]
                         #Controller:
                         #TBD Thymio.astolfi get speed and set them
-                        #TBD Update plots
+                        draw_on_image(cam,Thymio,path_img)
             cam.cam.release()
             cv2.destroyAllWindows()
 
