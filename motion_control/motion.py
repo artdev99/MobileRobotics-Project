@@ -1,15 +1,15 @@
 import math
 
-#TO DO : What are the units of x and y (the parameters) ? If not in meter -> fix units
+#TO DO : What are the units of x and y (the parameters) ? If not in cm -> fix units
 
 def motion_control(x,y,theta,x_goal,y_goal):
 
-    R_WHEEL = 4.3 * 10^-2                    #wheels radius [m]
-    L_AXIS = 9.2 * 10^-2                     #wheel axis length [m]
-    DISTANCE_THRESHOLD = 3*10^-2             #margin to consider goal reached [m]
-    ANGLE_THRESHOLD = 0.1                    #margin to consider goal reached [rad]
-    SPEED_LIMIT = 500                        #PWM
-    SCALING_FACTOR = 500/(20*10^-2/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 20cm/s
+    R_WHEEL = 4.3                     #wheels radius [cm]
+    L_AXIS = 9.2                      #wheel axis length [cm]
+    DISTANCE_THRESHOLD = 3            #margin to consider goal reached [cm]
+    ANGLE_THRESHOLD = 0.1             #margin to consider goal reached [rad]
+    SPEED_LIMIT = 500                 #PWM
+    SCALING_FACTOR = 500/(20/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 20cm/s
 
     def normalize_angle(angle): #restricts angle [rad] between -pi and pi
         while angle > math.pi:
@@ -33,14 +33,14 @@ def motion_control(x,y,theta,x_goal,y_goal):
     k_alpha = 3.0   #controls rotational velocity 
     k_beta = -0.5   #damping term (to stabilize the robot's orientation when reaching the goal)
 
-    delta_x = x_goal - x #[m]
-    delta_y = y_goal - y #[m]
+    delta_x = x_goal - x #[cm]
+    delta_y = y_goal - y #[cm]
 
-    distance_to_goal =math.sqrt( (delta_x)**2 + (delta_y)**2 )          #[m]
+    distance_to_goal =math.sqrt( (delta_x)**2 + (delta_y)**2 )          #[cm]
     delta_angle = normalize_angle(math.atan2(delta_y, delta_x) - theta) #difference between the robot's orientation and the direction of the goal [rad]
     #print("IN: d=", distance_to_goal, " angle=",delta_angle)
 
-    v = k_rho*distance_to_goal                                  #translational velocity [m/s]
+    v = k_rho*distance_to_goal                                  #translational velocity [cm/s]
     omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta)  #rotational velocity [rad/s]
     
     #Calculate motor speed
