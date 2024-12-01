@@ -11,11 +11,12 @@ from final_functions import *
 ###########################################################
 camera_index=1 #0 if no webcam
 corner_aruco_id=[0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
+corner_aruco_size=70 #mm
 min_size=5000 #minimum blob size
 thresh_obstacle=np.array([0,0,120,0,0,140]) #BGR
 thresh_goal=np.array([0,120,0,0,140,0]) #BGR
 Thymio_id=9
-grid_size=300 #pix
+grid_size=300 #blocks? TBD blovks or pixels?
 ANGLE_THRESHOLD = np.radians(40)   #threshold under which changes of directions are ignored [rad]
 STEP = 3                           #step (in number of cells) between each cell we study
 COUNTER_THRESHOLD = 3              #max number of steps between keypoints
@@ -29,7 +30,7 @@ with ClientAsync() as client:
     async def main():
         async with client.lock() as node:
             #Camera initialization
-            cam=camera_class(camera_index,corner_aruco_id,min_size, thresh_obstacle, thresh_goal)
+            cam=camera_class(camera_index,corner_aruco_id,corner_aruco_size,min_size, thresh_obstacle, thresh_goal)
 
             #Thymio initialization
             Thymio=Thymio_class(Thymio_id,cam.persp_image)
@@ -38,7 +39,9 @@ with ClientAsync() as client:
             Path_planning=True #We want to have the path
 
             while True:
-            
+                #Update Image
+                cam.get_image()
+                cam.correct_perspective_aruco(get_matrix=False)
                 #Path Planning
                 if Path_planning:
                     if Thymio.target_keypoint==None: #only possible at first iteration to not take time later

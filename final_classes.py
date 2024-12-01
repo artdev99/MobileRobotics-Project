@@ -12,7 +12,7 @@ from final_functions import *
 #Camera
 ########################
 class camera_class:
-    def __init__(self,camera_index=1,corner_aruco_id=[0, 1, 2, 10],min_size=5000, thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0])):
+    def __init__(self,camera_index=1,corner_aruco_id=[0, 1, 2, 10],corner_aruco_size=70,min_size=5000, thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0])):
 
         self.cam = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
         if not self.cam.isOpened():
@@ -32,6 +32,7 @@ class camera_class:
         #We correct the perspective and get the perspective matrices to not have to find the corners at each iteration
         self.corner_aruco_id=corner_aruco_id
         self.correct_perspective_aruco(get_matrix=True)
+        self.pixbymm=self.size_aruco/corner_aruco_size
         #We get the image with expanded obstacles and all the contours
         self.thresholded_image,self.obstacle_cnt, self.obstacle_cnt_expnded, self.goal_cnt,self.goal_center= full_detection_cnt_centroid(self.persp_image, thresh_obstacle, thresh_goal, min_size)
         
@@ -50,7 +51,6 @@ class camera_class:
 
 
     def correct_perspective_aruco(self,get_matrix=False) -> np.ndarray:
-        self.size_aruco=-1
         if get_matrix:
             
             corners, self.size_aruco= find_aruco_corners_size(self.image)
@@ -69,7 +69,7 @@ class camera_class:
 
 
 ########################
-#Thymio
+#Thymio class
 ########################
 class Thymio_class:
     def __init__(self,Thymio_id,image):
@@ -83,6 +83,7 @@ class Thymio_class:
         self.keypoints=None
         self.target_keypoint=None
         self.local_avoidance=False
+
 
 
     def Thymio_position_aruco(self,img):
