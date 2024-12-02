@@ -15,7 +15,7 @@ KFilter.H = np.array([[1, 0, 0],  # Measurement function
                       [0, 0, 1]])
 
 KFilter.P = np.eye(3) * 9999  # Initial covariance matrix (uncertainty)
-KFilter.R = np.diag([0.1, 0.1, 0.01])  # Measurement noise
+KFilter.R = np.diag([0.024, 0.024, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
 KFilter.Q = np.diag([0.01, 0.01, 0.001])  # Process noise
 
 delta_t = 0.15  # Time step

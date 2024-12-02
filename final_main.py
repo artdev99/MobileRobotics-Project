@@ -50,7 +50,7 @@ with ClientAsync() as client:
                         do_plot=True
                     grid=discretize_image_eff(cam.thresholded_image,grid_size)
                     #Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
-                    path, _, _ = a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio.xytheta_est[1],Thymio.xytheta_est[0]]),cam.persp_image,grid), grid1_coord2grid2_coord(np.array([cam.goal_center[1],cam.goal_center[0]]),cam.persp_image,grid),do_plot)
+                    path= a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio.xytheta_est[1],Thymio.xytheta_est[0]]),cam.persp_image,grid), grid1_coord2grid2_coord(np.array([cam.goal_center[1],cam.goal_center[0]]),cam.persp_image,grid),do_plot)
                     
                     # Convert path coordinates for plotting
                     path_img = grid1_coord2grid2_coord(path, grid, cam.perspimage)

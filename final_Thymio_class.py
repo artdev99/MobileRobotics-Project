@@ -1,21 +1,30 @@
 import cv2
 import numpy as np
 import time
+from final_camera_class import *
 ########################
 #Thymio class
 ########################
 class Thymio_class:
-    def __init__(self,Thymio_id,image):
+    def __init__(self,Thymio_id,cam):
 
         self.Thymio_ID=Thymio_id
-        self.Thymio_position_aruco(image)
+        self.Thymio_position_aruco(cam.persp_image)
+        self.pixbymm=cam.pixbymm
         self.xytheta_est = self.xytheta_meas
-        self.speed=np.zeros((1,2))
+        #self.speed=np.zeros((1,2))
         self.start_time=time.time()
         self.delta_t=0
         self.keypoints=None
         self.target_keypoint=None
         self.local_avoidance=False
+        #Kalman
+        #self.kalman_wheel_radius = 43 #mm
+        self.kalman_wheel_base = 92 #mm
+        self.kalman_process_cov = np.diag([0.01, 0.01, np.deg2rad(1)]) ** 2
+        self.kalman_measurement_cov = np.diag([0.05, 0.05, np.deg2rad(1)]) ** 2
+        self.kalman_P=np.diag([0.01,0.01,0.01])
+        self.v_var=151 # (v_var=var_L+var_R)
 
 
 
@@ -51,3 +60,96 @@ class Thymio_class:
     def delta_time_update(self):
         self.delta_t=time.time()-self.start_time
         self.start_time=time.time()
+#Kalman
+    def kalman_predict_state(self,v_L,v_R,cam):
+        """
+        Predict the next state
+        """
+        self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
+
+        theta =self.xytheta_est[2]
+
+        # Compute linear and angular velocities
+        v = (v_R + v_L) / 2
+        omega = (v_R - v_L) /self.kalman_wheel_base
+
+        # Update state
+        delta_theta = omega * self.delta_t
+        theta_mid = theta + delta_theta / 2 #midpoint method (the robot is turning so nwe take avg angle)
+        delta_x = v * np.cos(theta_mid) * self.delta_t
+        delta_y = v * np.sin(theta_mid) * self.delta_t
+
+        self.xytheta_est = self.xytheta_est + np.array([delta_x,delta_y,delta_theta])
+        
+        # Normalize angle to [-pi, pi]
+        self.xytheta_est[2] = (self.xytheta_est[2] + np.pi) % (2 * np.pi) - np.pi
+
+        """
+        Predict the next covariance matrix
+        """
+        # Compute Jacobian and covariance matrix
+        F,Q = compute_F_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_process_cov,self.v_L_var,self.v_R_var)
+
+
+        # Predict covariance
+        self.P = F @ self.P @ F.T + Q
+        
+        self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
+
+    def ekf_update(self):
+
+        self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
+        
+        H = np.eye(3) #We measure the states directly
+
+        # Innovation
+        y = self.xytheta_meas/self.pixbymm - H @ self.xytheta_est
+
+        # Normalize angle difference to [-pi, pi]
+        y[2, 0] = (y[2, 0] + np.pi) % (2 * np.pi) - np.pi
+
+        # Innovation covariance
+        S = H @ self.kalman_P @ H.T + self.kalman_measurement_cov
+
+        # Kalman gain
+        K = self.kalman_P @ H.T @ np.linalg.inv(S)
+
+        # Update state estimate
+        self.xytheta_est = self.xytheta_est + K @ y
+
+        # Normalize angle to [-pi, pi]
+        self.xytheta_est[2] = (self.xytheta_est[2] + np.pi) % (2 * np.pi) - np.pi
+
+        # Update covariance estimate
+        self.kalman_P = (np.eye(3) - K @ H) @ self.kalman_P
+
+        self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
+
+
+def compute_F_Q(theta,v_L,v_R,wheel_base,dt,process_cov,v_var):
+    """
+    Compute the Jacobian F and covariance matrix Q
+    """
+    # Linear and angular velocities
+    v = (v_R + v_L) / 2
+    omega = (v_R - v_L) / wheel_base
+    theta_mid = theta + omega * dt / 2 #midpoint method (the robot is turning)
+
+    # Compute Jacobian
+    F = np.array([
+        [1, 0, -v * np.sin(theta_mid) * dt],
+        [0, 1,  v * np.cos(theta_mid) * dt],
+        [0, 0, 1]
+    ])
+
+    omega_var = v_var / wheel_base** 2
+
+    # Process noise covariance
+    Q = np.array([
+        [v_var * dt ** 2, 0, 0],
+        [0, v_var * dt ** 2, 0],
+        [0, 0, omega_var * dt ** 2]
+    ]) + process_cov
+
+    return F,Q
+

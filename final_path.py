@@ -32,11 +32,10 @@ def a_star_search(map_grid, start, goal,do_plot):
     came_from = {}
     g_costs = {start: 0}
     explored = set()
-    cost_map=-1*np.ones_like(map_grid,dtype=np.float64)
 
     while open_set:  # While the open set is not empty
 
-        current_f_cost, current_g_cost, current_pos = heappop(open_set)
+        _, _, current_pos = heappop(open_set)
         # Add the current node to the explored set
         explored.add(current_pos)
 
@@ -73,7 +72,6 @@ def a_star_search(map_grid, start, goal,do_plot):
                     came_from[neighbor] = current_pos
                     g_costs[neighbor] = tentative_g_cost
                     f_cost=tentative_g_cost+heuristic(neighbor,goal)
-                    cost_map[neighbor]=f_cost
                     # Add neighbor to open set
                     heappush(open_set, (f_cost,tentative_g_cost,neighbor))
     
@@ -94,18 +92,18 @@ def a_star_search(map_grid, start, goal,do_plot):
 
             # Plot path
             if path is not None:
-                plt.plot(path[1], path[0], 'r-', linewidth=2)
+                plt.plot(path[1], path[0], 'b-', linewidth=2)
 
             # Plot start and goal
-            plt.plot(start[1], start[0], 'go', markersize=10)  # start in green
-            plt.plot(goal[1], goal[0], 'bo', markersize=10)    # goal in blue
+            plt.plot(start[1], start[0], 'co', markersize=10)  # start
+            plt.plot(goal[1], goal[0], 'go', markersize=10)    # goal
 
             plt.title('A* Path Finding')
             plt.xlabel('X-axis')
             plt.ylabel('Y-axis')
             plt.gca().invert_yaxis()  # Optional: invert Y-axis to match matrix indexing
             plt.show()
-        return path, explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
+        return path  # Return reversed path
     else:
         raise ValueError("No path found")
     
