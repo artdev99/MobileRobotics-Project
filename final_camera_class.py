@@ -85,18 +85,13 @@ def full_detection_cnt_centroid(image: np.ndarray, thresh_obstacle, thresh_goal,
 
     # Find Goal
     goal_mask = cv2.inRange(image, thresh_goal[:3], thresh_goal[3:6])
-    cv2.imshow("88",goal_mask)
-    cv2.waitKey(10)
-    goal_mask = filter_small_blobs(goal_mask, min_size=min_size)
 
-    goal_mask, goal_cnt = fill_holes(goal_mask)
-
+    contours, _ = cv2.findContours(goal_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    goal_cnt = max(contours, key=cv2.contourArea)
+    goal_mask =np.zeros_like(goal_mask)
+    cv2.drawContours(goal_mask, goal_cnt, -1, 255, thickness=cv2.FILLED)
     thresholded_img[goal_mask==255] = [0, 255, 0]
     #Goal Center:
-    cv2.imshow("95",image)
-    cv2.waitKey(10)
-    #cv2.imshow("97",goal_mask)
-    #cv2.waitKey(5000)
     M = cv2.moments((goal_mask*255).astype(np.uint8))
     Goal_x = int(M["m10"] / M["m00"])
     Goal_y = int(M["m01"] / M["m00"])
