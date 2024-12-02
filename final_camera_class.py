@@ -189,7 +189,7 @@ def find_aruco_corners_size(image):
 
 
 
-def draw_on_image(camera,Thymio,path_img,target_keypoint):
+def draw_on_image(camera,Thymio,path_img):
     image_cnt=camera.persp_image.copy()
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0,255,0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
@@ -198,7 +198,9 @@ def draw_on_image(camera,Thymio,path_img,target_keypoint):
     #if the line below oes crazy remove the .T TBD
     #cv2.polylines(image_cnt, [Thymio.keypoints.T.reshape(-1,1,2)], isClosed=False, color=(255, 255, 151), thickness=2) 
     cv2.circle(image_cnt,camera.goal_center.flatten(), 10, (0,255,0), -1)
-    cv2.circle(image_cnt, target_keypoint, 10, (0, 255, 255), -1)
+    for i in range(len(Thymio.keypoints)):
+        cv2.circle(image_cnt, Thymio.keypoints[i], 10, (200, 240, 190), -1)
+    cv2.circle(image_cnt, Thymio.target_keypoint, 10, (0, 255, 255), -1)
 
     if Thymio.Thymio_detected:
         Thymio_nose=1.5*camera.size_aruco*np.array([np.cos(Thymio.xytheta_meas[2]),np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
