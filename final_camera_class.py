@@ -200,18 +200,18 @@ def draw_on_image(camera,Thymio,path_img):
         Thymio_nose=Thymio_nose+Thymio.xytheta_meas[:2]
         cv2.arrowedLine(image_cnt, Thymio.xytheta_meas[:2].astype(int),Thymio_nose.astype(int) , (255, 0, 255), 2, tipLength=0.2)
     
-    #Kalman:
-    #sigma-confidence Position (68%)
-    print(Thymio.xytheta_est[:2].astype(int))
-    print((np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int))
+#     #Kalman:
+#     #sigma-confidence Position (68%)
+#     print(Thymio.xytheta_est[:2].astype(int))
+#     print((np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int))
     
-    cv2.circle(image_cnt, Thymio.xytheta_est[:2].astype(int), (np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int), (255, 153, 204), 1)
-    #Angle:
-    radius=1.5*camera.size_aruco
-    # sigma-confidence arc (68%)
-    start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(np.sqrt(Thymio.kalman_P[2,2]))  # Start of the arc
-    end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(np.sqrt(Thymio.kalman_P[2,2]))    # End of the arc
-    cv2.ellipse(image_cnt, Thymio.xytheta_est[:2].astype(int), (radius, radius), 0, start_angle, end_angle, (255, 0, 127), 1)
+#     cv2.circle(image_cnt, Thymio.xytheta_est[:2].astype(int), (np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int), (255, 153, 204), 1)
+#     #Angle:
+#     radius=1.5*camera.size_aruco
+#     # sigma-confidence arc (68%)
+#     start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(np.sqrt(Thymio.kalman_P[2,2]))  # Start of the arc
+#     end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(np.sqrt(Thymio.kalman_P[2,2]))    # End of the arc
+#     cv2.ellipse(image_cnt, Thymio.xytheta_est[:2].astype(int), (radius, radius), 0, start_angle, end_angle, (255, 0, 127), 1)
     
 
     cv2.imshow('Camera View', image_cnt)
