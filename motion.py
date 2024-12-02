@@ -1,27 +1,27 @@
 import math
 
-def pixel_to_cm(value_pixel, pixbymm):
-    value_cm = (value_pixel/pixbymm)/10
-    return value_cm   #[cm]
+def pixel_to_mm(value_pixel, pixbymm):
+    value_mm = value_pixel/pixbymm
+    return value_mm   #[mm]
 
 def adjust_units(Thymio_xytheta, c_goal, pixbymm):
-    x_cm = pixel_to_cm((Thymio_xytheta.flatten())[0], pixbymm)
-    y_cm = pixel_to_cm((Thymio_xytheta.flatten())[1], pixbymm)
+    x_mm = pixel_to_mm((Thymio_xytheta.flatten())[0], pixbymm)
+    y_mm = pixel_to_mm((Thymio_xytheta.flatten())[1], pixbymm)
     theta_rad = Thymio_xytheta.flatten()[2]
-    #x_goal_cm=pixel_to_cm((c_goal.flatten())[0], pixbymm)
-    #y_goal_cm=pixel_to_cm((c_goal.flatten())[1], pixbymm)
-    x_goal_cm= (405/pixbymm)/10
-    y_goal_cm= (234/pixbymm)/10
-    return x_cm, y_cm, theta_rad, x_goal_cm, y_goal_cm
+    #x_goal_mm=pixel_to_mm((c_goal.flatten())[0], pixbymm)
+    #y_goal_mm=pixel_to_mm((c_goal.flatten())[1], pixbymm)
+    x_goal_mm= 405/pixbymm
+    y_goal_mm= 234/pixbymm
+    return x_mm, y_mm, theta_rad, x_goal_mm, y_goal_mm
 
 def motion_control(x,y,theta,x_goal,y_goal):
 
-    R_WHEEL = 4.3                     #wheels radius [cm]
-    L_AXIS = 9.2                      #wheel axis length [cm]
-    DISTANCE_THRESHOLD = 3            #margin to consider goal reached [cm]
+    R_WHEEL = 43                      #wheels radius [mm]
+    L_AXIS = 92                       #wheel axis length [mm]
+    DISTANCE_THRESHOLD = 30           #margin to consider goal reached [mm]
     ANGLE_THRESHOLD = 0.1             #margin to consider goal reached [rad]
     SPEED_LIMIT = 500                 #PWM
-    SCALING_FACTOR = 500/(20/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 20cm/s
+    SCALING_FACTOR = 500/(200/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
 
     def normalize_angle(angle): #restricts angle [rad] between -pi and pi
         while angle > math.pi:
@@ -42,18 +42,18 @@ def motion_control(x,y,theta,x_goal,y_goal):
         return v
     
     #To do : Tune k by testing
-    k_rho = 1.0     #controls translational velocity
-    k_alpha = 4.0   #controls rotational velocity 
+    k_rho = 0.1     #controls translational velocity
+    k_alpha = 0.4   #controls rotational velocity 
     k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
-    delta_x = x_goal - x #[cm]
-    delta_y = y_goal - y #[cm]
+    delta_x = x_goal - x #[mm]
+    delta_y = y_goal - y #[mm]
 
-    distance_to_goal =math.sqrt( (delta_x)**2 + (delta_y)**2 )          #[cm]
+    distance_to_goal =math.sqrt( (delta_x)**2 + (delta_y)**2 )          #[mm]
     delta_angle = normalize_angle(math.atan2(delta_y, delta_x) - theta) #difference between the robot's orientation and the direction of the goal [rad]
     print("IN: d=", distance_to_goal, " angle=",math.degrees(delta_angle))
 
-    v = k_rho*distance_to_goal                                  #translational velocity [cm/s]
+    v = k_rho*distance_to_goal                                  #translational velocity [mm/s]
     omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta)  #rotational velocity [rad/s]
     print("omega = ", omega)
     
@@ -71,8 +71,6 @@ def motion_control(x,y,theta,x_goal,y_goal):
         v_mr=0
         print("goal reached !")
     
-    v_ml = v_ml/10
-    v_mr = v_mr/10
     print("v_ml : ", v_ml, "v_mr : ", v_mr)
     
     v_ml = limit_speed(v_ml)
