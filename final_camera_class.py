@@ -195,8 +195,6 @@ def draw_on_image(camera,Thymio,path_img,target_keypoint):
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt_expnded, -1, (0,100,255), 3)
     cv2.polylines(image_cnt, [path_img.T.reshape(-1,1,2)], isClosed=False, color=(255, 0, 0), thickness=3)
-    #if the line below oes crazy remove the .T TBD
-    #cv2.polylines(image_cnt, [Thymio.keypoints.T.reshape(-1,1,2)], isClosed=False, color=(255, 255, 151), thickness=2) 
     cv2.circle(image_cnt,camera.goal_center.flatten(), 10, (0,255,0), -1)
     cv2.circle(image_cnt, target_keypoint, 10, (0, 255, 255), -1)
 
@@ -204,6 +202,17 @@ def draw_on_image(camera,Thymio,path_img,target_keypoint):
         Thymio_nose=1.5*camera.size_aruco*np.array([np.cos(Thymio.xytheta_meas[2]),np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
         Thymio_nose=Thymio_nose+Thymio.xytheta_meas[:2]
         cv2.arrowedLine(image_cnt, Thymio.xytheta_meas[:2].astype(int),Thymio_nose.astype(int) , (255, 0, 255), 2, tipLength=0.2)
-    #TBD add Thymio estimated + circle for variance (and two small arrows for angle variance?)
+    
+    #Kalman:
+    #sigma-confidence Position (68%)
+    cv2.circle(image_cnt, Thymio.xytheta_est[:2], np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm, (255, 153, 204), 1)
+    #Angle:
+    radius=1.5*camera.size_aruco
+    # sigma-confidence arc (68%)
+    start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(np.sqrt(Thymio.kalman_P[2,2]))  # Start of the arc
+    end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(np.sqrt(Thymio.kalman_P[2,2]))    # End of the arc
+    cv2.ellipse(image_cnt, Thymio.xytheta_est[:2].astype(int), (radius, radius), 0, start_angle, end_angle, (255, 0, 127), 1)
+    
+
     cv2.imshow('Camera View', image_cnt)
     cv2.waitKey(1)
