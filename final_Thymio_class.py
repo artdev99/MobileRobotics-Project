@@ -59,7 +59,7 @@ class Thymio_class:
         self.delta_t=time.time()-self.start_time
         self.start_time=time.time()
 #Kalman
-    def kalman_predict_state(self,v_L,v_R,cam):
+    def kalman_predict_state(self,v_L,v_R):
         """
         Predict the next state
         """
@@ -94,7 +94,7 @@ class Thymio_class:
         
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
 
-    def ekf_update(self):
+    def kalman_update_state(self):
 
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
         
