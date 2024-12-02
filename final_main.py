@@ -1,6 +1,3 @@
-%reload_ext autoreload
-%autoreload 2
-
 import numpy as np
 import cv2
 from tdmclient import ClientAsync, aw
@@ -25,7 +22,7 @@ ANGLE_THRESHOLD = np.radians(40)   #threshold under which changes of directions 
 STEP = 10                           #step (in number of cells) between each cell we study
 COUNTER_THRESHOLD = 10              #max number of steps between keypoints
 keypoint_dist_thresh=75 #[mm]
-SCALING_FACTOR = 500/(200/43)
+
 ###########################################################
 #Main Code
 ###########################################################
@@ -81,22 +78,17 @@ async def main():
         #Kalman Filter
         v_L=[]
         v_R=[]
-        
-        
-        # await node.wait_for_variables({"prox.horizontal"})
-        #     while True:
-        #         prox_front = node.v.prox.horizontal[2]
-                
         for _ in range(10): #remove some variance
-            await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
-            v_L.append(node.v.motor.left.speed/SCALING_FACTOR)
-            v_L.append(node.v.motor.right.speed/SCALING_FACTOR)
+            v_L.append(node.get_variable("motor.left.speed"))
+            v_L.append(node.get_variable("motor.right.speed"))
         v_L=np.mean(v_L)
         v_R=np.mean(v_R)
 
         Thymio.kalman_predict_state(v_L,v_R) #Predict
         if Thymio.Thymio_detected: #only update if Thymio detected
             Thymio.kalman_update_state()
+
+
 
         #Obstacle detection
         #TBD await get oprox sensor data
