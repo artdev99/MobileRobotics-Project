@@ -65,7 +65,7 @@ class camera_class:
 def full_detection_cnt_centroid(image: np.ndarray, thresh_obstacle, thresh_goal,min_size, corner_aruco_size_mm,corner_aruco_size_pix) -> np.ndarray:
     thresholded_img = np.zeros_like(image)
     Thymio_radius_mm=70 #mm
-    radius=0.2*Thymio_radius_mm*corner_aruco_size_pix/corner_aruco_size_mm
+    radius=0.38*Thymio_radius_mm*corner_aruco_size_pix/corner_aruco_size_mm
     # Find Obstacles
     obstacle_mask=255*np.ones(image.shape[:2], dtype=np.uint8)
     for i in range(thresh_obstacle.shape[0]):
@@ -203,10 +203,10 @@ def draw_on_image(camera,Thymio,path_img):
     
     #Kalman:
     #sigma-confidence Position (68%)
-    print(Thymio.xytheta_est[:2].astype(int))
-    print((np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int))
+    #print(Thymio.xytheta_est[:2].astype(int))
+    #print((np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int))
     
-    cv2.circle(image_cnt, Thymio.xytheta_est[:2].astype(int), (np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int), (255, 153, 204), 2)
+    cv2.circle(image_cnt, Thymio.xytheta_est[:2].astype(int), (2*np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int), (0, 255, 255), 2)
     #Angle:
     radius=1.5*camera.size_aruco
     # sigma-confidence arc (95%)

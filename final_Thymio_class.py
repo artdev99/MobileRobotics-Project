@@ -68,7 +68,7 @@ class Thymio_class:
         # Compute linear and angular velocities
         v = (v_R + v_L) / 2
         omega = (v_R - v_L) /self.kalman_wheel_base
-        print(f"73{v}")
+        #print(f"73{v}")
 
         # Update state
         delta_theta = omega * self.delta_t
