@@ -31,13 +31,13 @@ keypoint_dist_thresh=75 #[mm]
 ###########################################################
 from tdmclient import ClientAsync, aw
 client = ClientAsync()
-node = await client.wait_for_node()
-aw(node.lock())
 
 async def main():
-    
     cv2.destroyAllWindows()
-    
+
+    node = await client.wait_for_node()
+    aw(node.lock())
+
     #Camera initialization
     cam=camera_class(camera_index,corner_aruco_id,corner_aruco_size,min_size, thresh_obstacle, thresh_goal)
 
@@ -78,12 +78,20 @@ async def main():
         Thymio.delta_time_update()
         #TBD await get motor speed something       
 
-        if Thymio.Thymio_detected:
-            #TBD Thymio.kalmanfilter_detected don't forget variance of kalman filter in plot!!
-            pass
-        else:
-            #TBD Thymio.kalmanfilter_not_detected
-            pass
+        #Kalman Filter
+        v_L=[]
+        v_R=[]
+        for _ in range(10): #remove some variance
+            v_L.append(node.get_variable("motor.left.speed"))
+            v_L.append(node.get_variable("motor.right.speed"))
+        v_L=np.mean(v_L)
+        v_R=np.mean(v_R)
+
+        Thymio.kalman_predict_state(v_L,v_R) #Predict
+        if Thymio.Thymio_detected: #only update if Thymio detected
+            Thymio.kalman_update_state()
+
+
 
         #Obstacle detection
         #TBD await get oprox sensor data

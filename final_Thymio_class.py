@@ -11,18 +11,16 @@ class Thymio_class:
         self.Thymio_position_aruco(cam.persp_image)
         self.pixbymm=cam.pixbymm
         self.xytheta_est = self.xytheta_meas
-        #self.speed=np.zeros((1,2))
         self.start_time=time.time()
         self.delta_t=0
         self.keypoints=None
         self.target_keypoint=None
         self.local_avoidance=False
         #Kalman
-        #self.kalman_wheel_radius = 43 #mm
         self.kalman_wheel_base = 92 #mm
-        self.kalman_process_cov = np.diag([0.01, 0.01, np.deg2rad(1)]) ** 2
-        self.kalman_measurement_cov = np.diag([0.05, 0.05, np.deg2rad(1)]) ** 2
-        self.kalman_P=np.diag([0.01,0.01,0.01])
+        self.kalman_process_cov = np.diag([1.0, 1.0, np.deg2rad(5)]) ** 2
+        self.kalman_measurement_cov = np.diag([1, 1, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.kalman_P=100*self.kalman_measurement_cov
         self.v_var=151 # (v_var=var_L+var_R)
 
 
@@ -60,7 +58,7 @@ class Thymio_class:
         self.delta_t=time.time()-self.start_time
         self.start_time=time.time()
 #Kalman
-    def kalman_predict_state(self,v_L,v_R,cam):
+    def kalman_predict_state(self,v_L,v_R):
         """
         Predict the next state
         """
@@ -95,7 +93,7 @@ class Thymio_class:
         
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
 
-    def ekf_update(self):
+    def kalman_update_state(self):
 
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
         
