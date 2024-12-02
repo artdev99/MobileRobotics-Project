@@ -4,9 +4,9 @@ from heapq import heappush, heappop
 import matplotlib.pyplot as plt
 
 
-def discretize_image_eff(image, grid_size0,grid_size1):
+def discretize_image_eff(image, grid_size0, grid_size1):
 
-    mask = np.all(image == 255, axis=2).astype(np.uint8)
+    mask = np.all(image == [0,0,255], axis=2).astype(np.uint8)
 
     # Resize the mask to the desired grid size
     resized_mask = cv2.resize(mask, (grid_size0, grid_size1), interpolation=cv2.INTER_NEAREST).astype(np.int32)
@@ -133,9 +133,9 @@ def find_keypoints(path,ANGLE_THRESHOLD=np.radians(40),STEP = 3,COUNTER_THRESHOL
         return path
 
     keypoints = [] 
-    keypoints.append(path[0]) #beginning of the path
+    #keypoints.append(path[0]) #beginning of the path
     counter = 1
-    print("len path : ", len(path))
+    #print("len path : ", len(path))
 
     for i in range(STEP, len(path)-STEP, STEP):
         #print("in keypoints step ",i)
@@ -149,11 +149,11 @@ def find_keypoints(path,ANGLE_THRESHOLD=np.radians(40),STEP = 3,COUNTER_THRESHOL
         
         if (abs(find_rotation(dir_previous,dir_next)) > ANGLE_THRESHOLD): #significant change of direction
             keypoints.append(current)
-            print("cell added : ", current)
+            #print("cell added : ", current)
             counter = 1
         elif (counter >= COUNTER_THRESHOLD): #ensures there isn't too much space between keypoints (so we avoid accumulating ignored small changes of directions)
             keypoints.append(current)
-            print("cell added (space): ", current)
+            #print("cell added (space): ", current)
             counter = 1
         else:
             counter += 1
