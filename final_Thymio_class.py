@@ -62,21 +62,19 @@ class Thymio_class:
         """
         Predict the next state
         """
-        print(f"65{self.xytheta_est}")
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-        print(f"67{self.xytheta_est}")
         theta =self.xytheta_est[2]
 
         # Compute linear and angular velocities
         v = (v_R + v_L) / 2
         omega = (v_R - v_L) /self.kalman_wheel_base
+        print(f"73{v}")
 
         # Update state
         delta_theta = omega * self.delta_t
         theta_mid = theta + delta_theta / 2 #midpoint method (the robot is turning so nwe take avg angle)
         delta_x = v * np.cos(theta_mid) * self.delta_t
         delta_y = v * np.sin(theta_mid) * self.delta_t
-
         self.xytheta_est = self.xytheta_est + np.array([delta_x,delta_y,delta_theta])
         
         # Normalize angle to [-pi, pi]
@@ -85,23 +83,18 @@ class Thymio_class:
         """
         Predict the next covariance matrix
         """
-        print(f"88{self.kalman_P}")
         # Compute Jacobian and covariance matrix
         F,Q = compute_F_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_process_cov,self.v_var)
 
 
         # Predict covariance
         self.kalman_P = F @ self.kalman_P @ F.T + Q
-        print(f"95{self.kalman_P}")
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
-        print(f"97{self.xytheta_est}")
 
 
     def kalman_update_state(self):
-        print(f"101{self.xytheta_est}")
 
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-        print(f"104{self.xytheta_est}")
         H = np.eye(3) #We measure the states directly
 
         # Innovation
@@ -118,15 +111,12 @@ class Thymio_class:
 
         # Update state estimate
         self.xytheta_est = self.xytheta_est + K @ y
-        print(f"121{self.xytheta_est}")
         # Normalize angle to [-pi, pi]
         self.xytheta_est[2] = (self.xytheta_est[2] + np.pi) % (2 * np.pi) - np.pi
 
         # Update covariance estimate
         self.kalman_P = (np.eye(3) - K @ H) @ self.kalman_P
-        print(f"127{self.kalman_P}")
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
-        print(f"129{self.xytheta_est}")
 
 def compute_F_Q(theta,v_L,v_R,wheel_base,dt,process_cov,v_var):
     """
