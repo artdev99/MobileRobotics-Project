@@ -18,9 +18,9 @@ class Thymio_class:
         self.local_avoidance=False
         #Kalman
         self.kalman_wheel_base = 92 #mm
-        self.kalman_process_cov = np.diag([1.0, 1.0, np.deg2rad(5)]) ** 2
-        self.kalman_measurement_cov = np.diag([1, 1, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measured in pix**2 (0.0586945)
-        self.kalman_P=100*self.kalman_measurement_cov
+        self.kalman_process_cov = np.diag([1.5, 1.5, np.deg2rad(5)]) ** 2
+        self.kalman_measurement_cov = np.diag([1.5, 1.5, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.kalman_P=10*self.kalman_measurement_cov
         self.v_var=151 # (v_var=var_L+var_R)
 
 
@@ -62,8 +62,9 @@ class Thymio_class:
         """
         Predict the next state
         """
+        print(f"65{self.xytheta_est}")
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-
+        print(f"67{self.xytheta_est}")
         theta =self.xytheta_est[2]
 
         # Compute linear and angular velocities
@@ -84,19 +85,23 @@ class Thymio_class:
         """
         Predict the next covariance matrix
         """
+        print(f"88{self.kalman_P}")
         # Compute Jacobian and covariance matrix
-        F,Q = compute_F_Q(theta,v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_process_cov,self.v_var)
+        F,Q = compute_F_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_process_cov,self.v_var)
 
 
         # Predict covariance
         self.kalman_P = F @ self.kalman_P @ F.T + Q
-        
+        print(f"95{self.kalman_P}")
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
+        print(f"97{self.xytheta_est}")
+
 
     def kalman_update_state(self):
+        print(f"101{self.xytheta_est}")
 
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-        
+        print(f"104{self.xytheta_est}")
         H = np.eye(3) #We measure the states directly
 
         # Innovation
@@ -113,15 +118,15 @@ class Thymio_class:
 
         # Update state estimate
         self.xytheta_est = self.xytheta_est + K @ y
-
+        print(f"121{self.xytheta_est}")
         # Normalize angle to [-pi, pi]
         self.xytheta_est[2] = (self.xytheta_est[2] + np.pi) % (2 * np.pi) - np.pi
 
         # Update covariance estimate
         self.kalman_P = (np.eye(3) - K @ H) @ self.kalman_P
-
+        print(f"127{self.kalman_P}")
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
-
+        print(f"129{self.xytheta_est}")
 
 def compute_F_Q(theta,v_L,v_R,wheel_base,dt,process_cov,v_var):
     """
@@ -142,11 +147,13 @@ def compute_F_Q(theta,v_L,v_R,wheel_base,dt,process_cov,v_var):
     omega_var = v_var / wheel_base** 2
 
     # Process noise covariance
+    """
     Q = np.array([
         [v_var * dt ** 2, 0, 0],
         [0, v_var * dt ** 2, 0],
         [0, 0, omega_var * dt ** 2]
-    ]) + process_cov
+    ]) + process_cov* dt"""
+    Q=process_cov* dt
 
     return F,Q
 
