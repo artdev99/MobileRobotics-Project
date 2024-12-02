@@ -202,7 +202,10 @@ def draw_on_image(camera,Thymio,path_img):
     
     #Kalman:
     #sigma-confidence Position (68%)
-    cv2.circle(image_cnt, Thymio.xytheta_est[:2], np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm, (255, 153, 204), 1)
+    print(Thymio.xytheta_est[:2].astype(int))
+    print((np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int))
+    
+    cv2.circle(image_cnt, Thymio.xytheta_est[:2].astype(int), (np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int), (255, 153, 204), 1)
     #Angle:
     radius=1.5*camera.size_aruco
     # sigma-confidence arc (68%)

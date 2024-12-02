@@ -19,7 +19,7 @@ class Thymio_class:
         #Kalman
         self.kalman_wheel_base = 92 #mm
         self.kalman_process_cov = np.diag([1.0, 1.0, np.deg2rad(5)]) ** 2
-        self.kalman_measurement_cov = np.diag([1, 1, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.kalman_measurement_cov = np.diag([1, 1, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measured in pix**2 (0.0586945)
         self.kalman_P=100*self.kalman_measurement_cov
         self.v_var=151 # (v_var=var_L+var_R)
 
@@ -85,11 +85,11 @@ class Thymio_class:
         Predict the next covariance matrix
         """
         # Compute Jacobian and covariance matrix
-        F,Q = compute_F_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_process_cov,self.v_L_var,self.v_R_var)
+        F,Q = compute_F_Q(theta,v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_process_cov,self.v_var)
 
 
         # Predict covariance
-        self.P = F @ self.P @ F.T + Q
+        self.kalman_P = F @ self.kalman_P @ F.T + Q
         
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
 
@@ -103,7 +103,7 @@ class Thymio_class:
         y = self.xytheta_meas/self.pixbymm - H @ self.xytheta_est
 
         # Normalize angle difference to [-pi, pi]
-        y[2, 0] = (y[2, 0] + np.pi) % (2 * np.pi) - np.pi
+        y[2] = (y[2] + np.pi) % (2 * np.pi) - np.pi
 
         # Innovation covariance
         S = H @ self.kalman_P @ H.T + self.kalman_measurement_cov
