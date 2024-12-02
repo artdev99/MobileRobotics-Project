@@ -1,9 +1,9 @@
 import numpy as np
 import cv2
 from tdmclient import ClientAsync
-from final_classes import *
-from final_functions import *
-
+from final_camera_class import *
+from final_Thymio_class import *
+from final_path import *
 
 ###########################################################
 #Parameters
@@ -57,6 +57,7 @@ with ClientAsync() as client:
                     keypoints=keypoints[np.linalg.norm(keypoints-Thymio.xytheta_est[:2],axis=1)<keypoint_dist_thresh,:] #Keep only far keypoints
                     Thymio.target_keypoint=Thymio.keypoints[0,:]
                     Thymio.keypoints=keypoints[1:,:]
+                    do_plot=False
                     Path_planning=False
                 
                 #Thymio Position and motor 
