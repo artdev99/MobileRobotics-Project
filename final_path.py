@@ -3,6 +3,10 @@ import numpy as np
 from heapq import heappush, heappop
 import matplotlib.pyplot as plt
 
+ANGLE_THRESHOLD = np.radians(20)   #threshold under which changes of directions are ignored [rad]
+STEP = 15                           #step (in number of cells) between each cell we study
+COUNTER_THRESHOLD = 7              #max number of steps between keypoints
+
 
 def discretize_image_eff(image, grid_size0, grid_size1):
 
@@ -119,13 +123,11 @@ def grid1_coord2grid2_coord(coord,grid1,grid2):
         coord_grid[1,:]=coord[1,:]*(grid2.shape[1]-1)/(grid1.shape[1]-1)
     return np.int32(np.rint(coord_grid))
 
-
 def find_rotation(dir_previous,dir_next):
         det = dir_previous[0] * dir_next[1] - dir_previous[1] * dir_next[0]
         dot_product = dir_previous[0] * dir_next[0] + dir_previous[1] * dir_next[1]
         theta = np.arctan2(det, dot_product) #angle between the two directions [rad]
         return theta
-
 
 def find_keypoints(path,ANGLE_THRESHOLD=np.radians(40),STEP = 3,COUNTER_THRESHOLD = 3 ):
     
