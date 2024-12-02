@@ -7,7 +7,7 @@ import time
 class Thymio_class:
     def __init__(self,Thymio_id,image):
 
-        self.Thymio_id=Thymio_id
+        self.Thymio_ID=Thymio_id
         self.Thymio_position_aruco(image)
         self.xytheta_est = self.xytheta_meas
         self.speed=np.zeros((1,2))

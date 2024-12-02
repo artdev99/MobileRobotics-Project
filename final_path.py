@@ -128,15 +128,17 @@ def find_rotation(dir_previous,dir_next):
 
 
 def find_keypoints(path,ANGLE_THRESHOLD=np.radians(40),STEP = 3,COUNTER_THRESHOLD = 3 ):
-        
+    path = path.T
     if len(path) < 3 :
         return path
 
     keypoints = [] 
     keypoints.append(path[0]) #beginning of the path
     counter = 1
+    print("len path : ", len(path))
 
     for i in range(STEP, len(path)-STEP, STEP):
+        #print("in keypoints step ",i)
         previous = path[i-STEP] #previous cell
         current = path[i]       #current cell
         next = path[i+STEP]     #next cell
@@ -147,9 +149,11 @@ def find_keypoints(path,ANGLE_THRESHOLD=np.radians(40),STEP = 3,COUNTER_THRESHOL
         
         if (abs(find_rotation(dir_previous,dir_next)) > ANGLE_THRESHOLD): #significant change of direction
             keypoints.append(current)
+            print("cell added : ", current)
             counter = 1
         elif (counter >= COUNTER_THRESHOLD): #ensures there isn't too much space between keypoints (so we avoid accumulating ignored small changes of directions)
             keypoints.append(current)
+            print("cell added (space): ", current)
             counter = 1
         else:
             counter += 1
