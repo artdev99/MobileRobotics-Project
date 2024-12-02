@@ -28,7 +28,7 @@ class camera_class:
         self.correct_perspective_aruco(get_matrix=True)
         self.pixbymm=self.size_aruco/corner_aruco_size
         #We get the image with expanded obstacles and all the contours
-        self.thresholded_image,self.obstacle_cnt, self.obstacle_cnt_expnded, self.goal_cnt,self.goal_center= full_detection_cnt_centroid(self.persp_image, thresh_obstacle, thresh_goal, min_size)
+        self.thresholded_image,self.obstacle_cnt, self.obstacle_cnt_expnded, self.goal_cnt,self.goal_center= full_detection_cnt_centroid(self.persp_image, thresh_obstacle, thresh_goal, min_size, self.size_aruco, corner_aruco_size)
         
 
 
@@ -65,7 +65,7 @@ class camera_class:
 def full_detection_cnt_centroid(image: np.ndarray, thresh_obstacle, thresh_goal,min_size, corner_aruco_size_mm,corner_aruco_size_pix) -> np.ndarray:
     thresholded_img = np.zeros_like(image)
     Thymio_radius_mm=70 #mm
-    radius=Thymio_radius_mm*corner_aruco_size_pix/corner_aruco_size_mm
+    radius=0.2*Thymio_radius_mm*corner_aruco_size_pix/corner_aruco_size_mm
     # Find Obstacles
     obstacle_mask=255*np.ones(image.shape[:2], dtype=np.uint8)
     for i in range(thresh_obstacle.shape[0]):
@@ -85,13 +85,18 @@ def full_detection_cnt_centroid(image: np.ndarray, thresh_obstacle, thresh_goal,
 
     # Find Goal
     goal_mask = cv2.inRange(image, thresh_goal[:3], thresh_goal[3:6])
-
+    cv2.imshow("88",goal_mask)
+    cv2.waitKey(10)
     goal_mask = filter_small_blobs(goal_mask, min_size=min_size)
 
     goal_mask, goal_cnt = fill_holes(goal_mask)
 
     thresholded_img[goal_mask==255] = [0, 255, 0]
     #Goal Center:
+    cv2.imshow("95",image)
+    cv2.waitKey(10)
+    #cv2.imshow("97",goal_mask)
+    #cv2.waitKey(5000)
     M = cv2.moments((goal_mask*255).astype(np.uint8))
     Goal_x = int(M["m10"] / M["m00"])
     Goal_y = int(M["m01"] / M["m00"])
@@ -185,14 +190,14 @@ def find_aruco_corners_size(image):
 
 
 def draw_on_image(camera,Thymio,path_img):
-    image_cnt=camera.perspimage.copy()
+    image_cnt=camera.persp_image.copy()
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0,255,0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt_expnded, -1, (0,100,255), 3)
     cv2.polylines(image_cnt, [path_img.T.reshape(-1,1,2)], isClosed=False, color=(255, 0, 0), thickness=3)
     #if the line below oes crazy remove the .T TBD
-    cv2.polylines(image_cnt, [Thymio.keypoints.T.reshape(-1,1,2)], isClosed=False, color=(255, 255, 151), thickness=2) 
-    cv2.circle(image_cnt,camera.c_goal.flatten(), 10, (0,255,0), -1)
+    #cv2.polylines(image_cnt, [Thymio.keypoints.T.reshape(-1,1,2)], isClosed=False, color=(255, 255, 151), thickness=2) 
+    cv2.circle(image_cnt,camera.goal_center.flatten(), 10, (0,255,0), -1)
 
     if Thymio.Thymio_detected:
         Thymio_nose=1.5*camera.size_aruco*np.array([np.cos(Thymio.xytheta_meas[2]),np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size

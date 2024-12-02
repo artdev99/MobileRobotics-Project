@@ -1,16 +1,17 @@
 import math
 
-def pixel_to_cm(value_pixel, aruco_size):
-    ARUCO_SIZE_CM = 7 #[cm]
-    value_cm = value_pixel*ARUCO_SIZE_CM/aruco_size 
+def pixel_to_cm(value_pixel, pixbymm):
+    value_cm = (value_pixel/pixbymm)/10
     return value_cm   #[cm]
 
-def adjust_units(Thymio_xytheta, c_goal, aruco_size):
-    x_cm = pixel_to_cm((Thymio_xytheta.flatten())[0], aruco_size)
-    y_cm = pixel_to_cm((Thymio_xytheta.flatten())[1], aruco_size)
+def adjust_units(Thymio_xytheta, c_goal, pixbymm):
+    x_cm = pixel_to_cm((Thymio_xytheta.flatten())[0], pixbymm)
+    y_cm = pixel_to_cm((Thymio_xytheta.flatten())[1], pixbymm)
     theta_rad = Thymio_xytheta.flatten()[2]
-    x_goal_cm=pixel_to_cm((c_goal.flatten())[0], aruco_size)
-    y_goal_cm=pixel_to_cm((c_goal.flatten())[1], aruco_size)
+    #x_goal_cm=pixel_to_cm((c_goal.flatten())[0], pixbymm)
+    #y_goal_cm=pixel_to_cm((c_goal.flatten())[1], pixbymm)
+    x_goal_cm= (405/pixbymm)/10
+    y_goal_cm= (234/pixbymm)/10
     return x_cm, y_cm, theta_rad, x_goal_cm, y_goal_cm
 
 def motion_control(x,y,theta,x_goal,y_goal):
@@ -30,7 +31,8 @@ def motion_control(x,y,theta,x_goal,y_goal):
         return angle
 
     def goal_reached(distance_to_goal,delta_angle):
-        return ((distance_to_goal<DISTANCE_THRESHOLD) and (abs(delta_angle)<ANGLE_THRESHOLD))
+        return (distance_to_goal<DISTANCE_THRESHOLD)
+        #return ((distance_to_goal<DISTANCE_THRESHOLD) and (abs(delta_angle)<ANGLE_THRESHOLD))
 
     def limit_speed(v):
         if(v>SPEED_LIMIT) :
@@ -41,7 +43,7 @@ def motion_control(x,y,theta,x_goal,y_goal):
     
     #To do : Tune k by testing
     k_rho = 1.0     #controls translational velocity
-    k_alpha = 1.0   #controls rotational velocity 
+    k_alpha = 4.0   #controls rotational velocity 
     k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
     delta_x = x_goal - x #[cm]
@@ -71,10 +73,10 @@ def motion_control(x,y,theta,x_goal,y_goal):
     
     v_ml = v_ml/10
     v_mr = v_mr/10
+    print("v_ml : ", v_ml, "v_mr : ", v_mr)
     
     v_ml = limit_speed(v_ml)
     v_mr = limit_speed(v_mr)
-    #print("IN: v_ml, v_mr : ", v_ml, v_mr)
     
     v_ml = int(v_ml)  #ensure integer type
     v_mr = int(v_mr)  #ensure integer type
