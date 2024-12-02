@@ -129,7 +129,7 @@ def find_rotation(dir_previous,dir_next):
         theta = np.arctan2(det, dot_product) #angle between the two directions [rad]
         return theta
 
-def find_keypoints(path,ANGLE_THRESHOLD=np.radians(40),STEP = 3,COUNTER_THRESHOLD = 3 ):
+def find_keypoints(path):
     
     path = path.T
     if len(path) < 3 :

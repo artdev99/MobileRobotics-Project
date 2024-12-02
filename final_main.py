@@ -18,11 +18,8 @@ thresh_goal=np.array([40,40,20,60,150,65]) #BGR
 Thymio_id=9
 grid_size0=400 #blocks? TBD numbers of blocks or pixels?
 grid_size1=300 #blocks? TBD numbers of blocks or pixels?
-ANGLE_THRESHOLD = np.radians(40)   #threshold under which changes of directions are ignored [rad]
-STEP = 10                           #step (in number of cells) between each cell we study
-COUNTER_THRESHOLD = 10              #max number of steps between keypoints
 keypoint_dist_thresh=75 #[mm]
-
+SCALING_FACTOR = 500/(200/43)
 ###########################################################
 #Main Code
 ###########################################################
@@ -63,7 +60,7 @@ async def main():
             path_img = grid1_coord2grid2_coord(path, grid, cam.persp_image)
             path_img = path_img[::-1]
             
-            Thymio.keypoints=find_keypoints(path_img,ANGLE_THRESHOLD,STEP,COUNTER_THRESHOLD)
+            Thymio.keypoints=find_keypoints(path_img)
             Thymio.target_keypoint=Thymio.keypoints[0]
             Thymio.keypoints=Thymio.keypoints[1:]
             
@@ -78,17 +75,16 @@ async def main():
         #Kalman Filter
         v_L=[]
         v_R=[]
+             
         for _ in range(10): #remove some variance
-            v_L.append(node.get_variable("motor.left.speed"))
-            v_L.append(node.get_variable("motor.right.speed"))
+            await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
+            v_L.append(node.v.motor.left.speed/SCALING_FACTOR)
+            v_R.append(node.v.motor.right.speed/SCALING_FACTOR)
         v_L=np.mean(v_L)
         v_R=np.mean(v_R)
-
         Thymio.kalman_predict_state(v_L,v_R) #Predict
         if Thymio.Thymio_detected: #only update if Thymio detected
             Thymio.kalman_update_state()
-
-
 
         #Obstacle detection
         #TBD await get oprox sensor data
@@ -108,14 +104,16 @@ async def main():
             else:
                 if((step % 5)==0) :
                     #Next keypoint and controller:
-                    #print("distance to keypoint: ", distance_to_goal(Thymio.xytheta_meas, Thymio.target_keypoint, cam.pixbymm))
-                    if(distance_to_goal(Thymio.xytheta_meas, Thymio.target_keypoint, cam.pixbymm)<keypoint_dist_thresh) :
+                    #print("distance to keypoint: ", distance_to_goal(cam.pixbymm))
+                    if((Thymio.distance_to_goal(cam.pixbymm))<keypoint_dist_thresh) :
                         if(len(Thymio.keypoints)<=1): #Thymio found the goal
+                            aw(node.stop())
+                            aw(node.unlock())
                             break
                         Thymio.keypoints=Thymio.keypoints[1:]
                         Thymio.target_keypoint=Thymio.keypoints[0]
 
-                    v_m = motion_control(Thymio.xytheta_meas, Thymio.target_keypoint, cam.pixbymm)
+                    v_m = Thymio.motion_control(cam.pixbymm)
                     await node.set_variables(v_m)
                 
                 draw_on_image(cam,Thymio,path_img)
@@ -125,5 +123,3 @@ async def main():
 # Run the main asynchronous function
 client.run_async_program(main)
 print("Mission accomplished")
-aw(node.stop())
-aw(node.unlock())
