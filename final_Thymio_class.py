@@ -128,19 +128,27 @@ class Thymio_class:
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
 
 #Motion control
-    def distance_to_goal(pixbymm):
-        x, y, _, x_goal, y_goal = adjust_units(self.xytheta_meas, Thymio.target_keypoint, pixbymm)
+    def adjust_units(self, pixbymm):
+        x_mm = pixel_to_mm((self.xytheta_meas.flatten())[0], pixbymm)
+        y_mm = pixel_to_mm((self.xytheta_meas.flatten())[1], pixbymm)
+        theta_rad = self.xytheta_meas.flatten()[2]
+        x_goal_mm=pixel_to_mm((self.target_keypoint.flatten())[0], pixbymm)
+        y_goal_mm=pixel_to_mm((self.target_keypoint.flatten())[1], pixbymm)
+        return x_mm, y_mm, theta_rad, x_goal_mm, y_goal_mm
+    
+    def distance_to_goal(self, pixbymm):
+        x, y, _, x_goal, y_goal = self.adjust_units(pixbymm)
         delta_x = x_goal - x #[mm]
         delta_y = y_goal - y #[mm]
         distance_to_goal = np.sqrt( (delta_x)**2 + (delta_y)**2 ) #[mm]
         return distance_to_goal
 
-    def motion_control(pixbymm):
+    def motion_control(self, pixbymm):
 
         k_alpha = 0.4   #controls rotational velocity 
         k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
-        x, y, theta, x_goal, y_goal = adjust_units(self.xytheta_meas, Thymio.target_keypoint, pixbymm)
+        x, y, theta, x_goal, y_goal = self.adjust_units(pixbymm)
 
         delta_x = x_goal - x #[mm]
         delta_y = y_goal - y #[mm]
@@ -187,14 +195,6 @@ def limit_speed(v):
 def pixel_to_mm(value_pixel, pixbymm):
     value_mm = value_pixel/pixbymm
     return value_mm #[mm]
-
-def adjust_units(Thymio_xytheta, c_goal, pixbymm):
-    x_mm = pixel_to_mm((Thymio_xytheta.flatten())[0], pixbymm)
-    y_mm = pixel_to_mm((Thymio_xytheta.flatten())[1], pixbymm)
-    theta_rad = Thymio_xytheta.flatten()[2]
-    x_goal_mm=pixel_to_mm((c_goal.flatten())[0], pixbymm)
-    y_goal_mm=pixel_to_mm((c_goal.flatten())[1], pixbymm)
-    return x_mm, y_mm, theta_rad, x_goal_mm, y_goal_mm
         
 def compute_F_Q(theta,v_L,v_R,wheel_base,dt,process_cov,v_var):
     """
