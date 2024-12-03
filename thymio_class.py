@@ -69,6 +69,8 @@ class Thymio_class:
         Predict the next state
         """
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
+        v_L=v_L/SPEED_SCALING_FACTOR #go from pwm to mm/s
+        v_R=v_R/SPEED_SCALING_FACTOR
         theta =self.xytheta_est[2]
 
         # Compute linear and angular velocities
