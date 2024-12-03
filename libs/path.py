@@ -1,12 +1,26 @@
-import math
+import cv2
 import numpy as np
 from heapq import heappush, heappop
+import matplotlib.pyplot as plt
+
+
+def discretize_image_eff(image, grid_size0, grid_size1):
+
+    mask = np.all(image == [0,0,255], axis=2).astype(np.uint8)
+
+    # Resize the mask to the desired grid size
+    resized_mask = cv2.resize(mask, (grid_size0, grid_size1), interpolation=cv2.INTER_NEAREST).astype(np.int32)
+
+    obstacle_grid = -2 * resized_mask + 1  #-1 obstacle, 1 rest
+
+    return obstacle_grid
+
 
 def heuristic(a, b):
     #Euclidian Distance
     return np.sqrt((a[0]-b[0])**2+(a[1]-b[1])**2)
 
-def a_star_search(map_grid, start, goal):
+def a_star_search(map_grid, start, goal,do_plot):
 
     #Initialize the open set as a priority queue and add the start node
     start=tuple(start.flatten())
@@ -45,7 +59,7 @@ def a_star_search(map_grid, start, goal):
             if neighbor in explored:
                 continue
             # Check if neighbor is within bounds and not an obstacle
-            if (0 <= neighbor[0] < map_grid.shape[0]) and (0 <= neighbor[1] < map_grid.shape[1]) and (map_grid[neighbor]!=-1):
+            if (0 <= neighbor[0] < map_grid.shape[0]) and (0 <= neighbor[1] < map_grid.shape[1]) and (map_grid[neighbor]>-1):
                 
                 # Calculate tentative_g_cost
                 if (neighbor[0]==current_pos[0]) or (neighbor[1]==current_pos[1]): #if goes straight
@@ -69,28 +83,57 @@ def a_star_search(map_grid, start, goal):
         path=[goal]
         while path[-1]!=start:
             path.append(came_from[path[-1]])
-        return np.array(path[::-1]).T, explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
-    else:
-        print("Error, no path")
-        return None, explored, cost_map
+        path= np.array(path[::-1]).T
+        if do_plot:
+            plt.figure(figsize=(10, 10))
+            plt.imshow(map_grid, cmap='Greys', origin='lower')
 
-def find_keypoints(path):
-        
-    def find_rotation(dir_previous,dir_next):
+            # Plot explored nodes
+            explored_nodes = np.array(list(explored))
+            plt.plot(explored_nodes[:,1], explored_nodes[:,0], 'y.', markersize=2)
+
+            # Plot path
+            if path is not None:
+                plt.plot(path[1], path[0], 'r-', linewidth=2)
+
+            # Plot start and goal
+            plt.plot(start[1], start[0], 'go', markersize=10)  # start in green
+            plt.plot(goal[1], goal[0], 'bo', markersize=10)    # goal in blue
+
+            plt.title('A* Path Finding')
+            plt.xlabel('X-axis')
+            plt.ylabel('Y-axis')
+            plt.gca().invert_yaxis()  # Optional: invert Y-axis to match matrix indexing
+            plt.show()
+        return path, explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
+    else:
+        raise ValueError("No path found")
+    
+def grid1_coord2grid2_coord(coord,grid1,grid2):
+    coord_grid=np.copy(coord)
+    if coord.ndim == 1:
+        coord_grid[0]=coord[0]*(grid2.shape[0]-1)/(grid1.shape[0]-1)
+        coord_grid[1]=coord[1]*(grid2.shape[1]-1)/(grid1.shape[1]-1)
+    else:
+        coord_grid[0,:]=coord[0,:]*(grid2.shape[0]-1)/(grid1.shape[0]-1)
+        coord_grid[1,:]=coord[1,:]*(grid2.shape[1]-1)/(grid1.shape[1]-1)
+    return np.int32(np.rint(coord_grid))
+
+
+def find_rotation(dir_previous,dir_next):
         det = dir_previous[0] * dir_next[1] - dir_previous[1] * dir_next[0]
         dot_product = dir_previous[0] * dir_next[0] + dir_previous[1] * dir_next[1]
-        theta = math.atan2(det, dot_product) #angle between the two directions [rad]
+        theta = np.arctan2(det, dot_product) #angle between the two directions [rad]
         return theta
 
-    ANGLE_THRESHOLD = math.radians(40) #threshold under which changes of directions are ignored [rad]
-    STEP = 3                           #step (in number of cells) between each cell we study
-    COUNTER_THRESHOLD = 3              #max number of steps between keypoints
-        
+
+def find_keypoints(path,ANGLE_THRESHOLD=np.radians(40),STEP = 3,COUNTER_THRESHOLD = 3 ):
+    
+    path = path.T
     if len(path) < 3 :
         return path
 
     keypoints = [] 
-    keypoints.append(path[0]) #beginning of the path
     counter = 1
 
     for i in range(STEP, len(path)-STEP, STEP):
