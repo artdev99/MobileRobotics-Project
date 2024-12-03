@@ -109,9 +109,10 @@ def a_star_search(map_grid, start, goal,do_plot):
             plt.ylabel('Y-axis')
             plt.gca().invert_yaxis()  # Optional: invert Y-axis to match matrix indexing
             plt.show()
-        return path, explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
+        return True, path, explored, cost_map  # Return reversed path, explored cells and cost_map for visualization
     else:
-        raise ValueError("No path found")
+        return False, 0, 0, 0
+        #raise ValueError("No path found")
     
 def grid1_coord2grid2_coord(coord,grid1,grid2):
     coord_grid=np.copy(coord)
@@ -149,11 +150,11 @@ def find_keypoints(path):
         
         if (abs(find_rotation(dir_previous,dir_next)) > ANGLE_THRESHOLD): #significant change of direction
             keypoints.append(current)
-            print("keypoint_angle : ", current)
+            #print("keypoint_angle : ", current)
             counter = 1
         elif (counter >= COUNTER_THRESHOLD): #ensures there isn't too much space between keypoints (so we avoid accumulating ignored small changes of directions)
             keypoints.append(current)
-            print("keypoint_counter : ", current)
+            #print("keypoint_counter : ", current)
             counter = 1
         else:
             counter += 1

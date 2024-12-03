@@ -7,7 +7,7 @@ L_AXIS = 92                              #wheel axis length [mm]
 SPEED_LIMIT = 500                        #PWM
 SPEED_SCALING_FACTOR = 500/(200/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
 SPEED_SCALING_FACTOR_Kalman = 500/200
-SPEED = 70                               #[mm/s] 
+SPEED = 50                               #[mm/s] 
         
 ########################
 #Thymio class
@@ -154,7 +154,7 @@ class Thymio_class:
 
     def motion_control(self):
 
-        k_alpha = 0.4   #controls rotational velocity 
+        k_alpha = 0.35   #controls rotational velocity 
         k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
         x, y, theta, x_goal, y_goal = self.adjust_units()
