@@ -24,6 +24,7 @@ class Thymio_class:
         self.keypoints=None
         self.target_keypoint=None
         self.local_avoidance=False
+        self.Thymio_xytheta_hist=np.empty((0,3))
         #Kalman
         self.kalman_wheel_base = 92 #mm
         self.kalman_Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
