@@ -1,10 +1,9 @@
 import numpy as np
 import cv2
 from tdmclient import ClientAsync, aw
-from final_camera_class import *
-from final_Thymio_class import *
-from final_path import *
-from motion import *
+from camera_class import *
+from thymio_class import *
+from path import *
 
 ###########################################################
 #Parameters
