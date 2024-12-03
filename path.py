@@ -13,7 +13,7 @@ def discretize_image_eff(image, grid_size0, grid_size1):
     mask = np.all(image == [0,0,255], axis=2).astype(np.uint8)
 
     # Resize the mask to the desired grid size
-    resized_mask = cv2.resize(mask, (grid_size0, grid_size1), interpolation=cv2.INTER_NEAREST).astype(np.int32)
+    resized_mask = cv2.resize(mask, (grid_size0, grid_size1), interpolation=cv2.INTER_NEAREST).astype(np.int32) # cv2.INTER_AREA
 
     obstacle_grid = -2 * resized_mask + 1  #-1 obstacle, 1 rest
 

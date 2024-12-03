@@ -25,9 +25,9 @@ class Thymio_class:
         self.local_avoidance=False
         #Kalman
         self.kalman_wheel_base = 92 #mm
-        self.kalman_process_cov = np.diag([1.5, 1.5, np.deg2rad(5)]) ** 2
-        self.kalman_measurement_cov = np.diag([1.5, 1.5, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
-        self.kalman_P=10*self.kalman_measurement_cov
+        self.kalman_Q = np.diag([1.5, 1.5, np.deg2rad(5)]) ** 2
+        self.kalman_R = np.diag([1.5, 1.5, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.kalman_P=10*self.kalman_R
         self.v_var=151 # (v_var=var_L+var_R)
 
     def Thymio_position_aruco(self,img):
@@ -90,11 +90,11 @@ class Thymio_class:
         Predict the next covariance matrix
         """
         # Compute Jacobian and covariance matrix
-        F,Q = compute_F_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_process_cov,self.v_var)
+        G,Q = compute_G_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.Q)
 
 
         # Predict covariance
-        self.kalman_P = F @ self.kalman_P @ F.T + Q
+        self.kalman_P = G @ self.kalman_P @ G.T + Q
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
 
 
@@ -110,7 +110,7 @@ class Thymio_class:
         y[2] = (y[2] + np.pi) % (2 * np.pi) - np.pi
 
         # Innovation covariance
-        S = H @ self.kalman_P @ H.T + self.kalman_measurement_cov
+        S = H @ self.kalman_P @ H.T + self.kalman_R
 
         # Kalman gain
         K = self.kalman_P @ H.T @ np.linalg.inv(S)
@@ -193,9 +193,9 @@ def pixel_to_mm(value_pixel, pixbymm):
     value_mm = value_pixel/pixbymm
     return value_mm #[mm]
         
-def compute_F_Q(theta,v_L,v_R,wheel_base,dt,process_cov,v_var):
+def compute_G_Q(theta,v_L,v_R,wheel_base,dt,process_cov):
     """
-    Compute the Jacobian F and covariance matrix Q
+    Compute the Jacobian G and covariance matrix Q
     """
     # Linear and angular velocities
     v = (v_R + v_L) / 2
@@ -203,22 +203,13 @@ def compute_F_Q(theta,v_L,v_R,wheel_base,dt,process_cov,v_var):
     theta_mid = theta + omega * dt / 2 #midpoint method (the robot is turning)
 
     # Compute Jacobian
-    F = np.array([
+    G = np.array([
         [1, 0, -v * np.sin(theta_mid) * dt],
         [0, 1,  v * np.cos(theta_mid) * dt],
         [0, 0, 1]
     ])
-
-    omega_var = v_var / wheel_base** 2
-
-    # Process noise covariance
-    """
-    Q = np.array([
-        [v_var * dt ** 2, 0, 0],
-        [0, v_var * dt ** 2, 0],
-        [0, 0, omega_var * dt ** 2]
-    ]) + process_cov* dt"""
+    #Process cov
     Q=process_cov* dt
 
-    return F,Q
+    return G,Q
 
