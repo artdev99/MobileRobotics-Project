@@ -219,16 +219,18 @@ def draw_on_image(camera,Thymio,path_img):
     cv2.imshow('Camera View', image_cnt)
     cv2.waitKey(1)
 
-def draw_history(camera,Thymio,path_img):
+def draw_history(camera,Thymio,path_img, keypoints):
     image_cnt=camera.persp_image.copy()
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0,255,0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt_expnded, -1, (0,100,255), 3)
     cv2.polylines(image_cnt, [path_img.T.reshape(-1,1,2)], isClosed=False, color=(255, 0, 0), thickness=3)
+    for i in range(len(keypoints)):
+        cv2.circle(image_cnt, keypoints[i], 5, (200, 240, 190), -1)
     cv2.circle(image_cnt,camera.goal_center.flatten(), 10, (0,255,0), -1)
 
     #Draw history
-    cv2.polylines(image_cnt, [Thymio.xytheta_meas_hist[:,:2].reshape(-1,1,2)], isClosed=False, color=(255, 0, 255), thickness=2)
-    cv2.polylines(image_cnt, [Thymio.xytheta_est_hist[:,:2].reshape(-1,1,2)], isClosed=False, color=(0, 255, 255), thickness=2)
+    cv2.polylines(image_cnt, [Thymio.xytheta_meas_hist[:,:2].astype(int).reshape(-1,1,2)], isClosed=False, color=(255, 0, 255), thickness=2)
+    cv2.polylines(image_cnt, [Thymio.xytheta_est_hist[:,:2].astype(int).reshape(-1,1,2)], isClosed=False, color=(0, 255, 255), thickness=2)
     cv2.imshow('History', image_cnt)
     cv2.waitKey(1)
