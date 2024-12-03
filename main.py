@@ -18,7 +18,7 @@ COLOR_GOAL = np.array([30,40,20,80,150,65])        #BGR
 THYMIO_ID = 9
 GRID_L = 400 #[pixels]
 GRID_W = 300 #[pixels]
-DISTANCE_THRESH = 75 #[mm]
+DISTANCE_THRESH = 65 #[mm]
 ###########################################################
 #Main Code
 ###########################################################
@@ -81,7 +81,7 @@ async def main():
                 print("couldn't find path, stopping the mission")
                 aw(node.stop())
                 aw(node.unlock())
-                draw_history(cam,Thymio,path_img, keypoints)
+                #draw_history(cam,Thymio,path_img, keypoints) #crash if no path ever
                 break
             
             # Convert path coordinates for plotting
@@ -115,7 +115,7 @@ async def main():
             Thymio.kalman_update_state()
 
         #Update history for final plot
-        if((step % 30)==0) :
+        if((step % 3)==0) :
             Thymio.xytheta_meas_hist = np.vstack((Thymio.xytheta_meas_hist, Thymio.xytheta_meas))
             Thymio.xytheta_est_hist = np.vstack((Thymio.xytheta_est_hist, Thymio.xytheta_est))
         
@@ -130,8 +130,8 @@ async def main():
                 v_m = avoid_obstacle(prox_values)
                 await node.set_variables(v_m)
             v_m = {
-                "motor.left.target": [100],
-                "motor.right.target": [100],
+                "motor.left.target": [50],
+                "motor.right.target": [50],
             }
             await node.set_variables(v_m)
             #time.sleep(0.2)
@@ -177,4 +177,3 @@ async def main():
 while True :
     client.run_async_program(main)
     
-
