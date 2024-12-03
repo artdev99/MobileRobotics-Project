@@ -165,6 +165,7 @@ def find_aruco_corners_size(image):
     # Define the order of markers: top-left, bottom-left, bottom-right, top-right
     marker_order = [0, 1, 2, 10]
     aruco_corner = [2, 1, 0, 3]  # Bottom-right, top-right, top-left, bottom-left of each aruco
+    aruco_corner = [0, 3, 2, 1]  # Bottom-right, top-right, top-left, bottom-left of each aruco
 
     for marker_id, corner_pos in zip(marker_order, aruco_corner):
 
@@ -200,7 +201,8 @@ def draw_on_image(camera,Thymio,path_img):
         Thymio_nose=radius*np.array([np.cos(Thymio.xytheta_meas[2]),np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
         Thymio_nose=Thymio_nose+Thymio.xytheta_meas[:2]
         cv2.arrowedLine(image_cnt, Thymio.xytheta_meas[:2].astype(int),Thymio_nose.astype(int) , (255, 0, 255), 2, tipLength=0.2)
-        cv2.arrowedLine(image_cnt, Thymio.xytheta_est[:2].astype(int),Thymio_nose.astype(int) , (71, 19, 105), 2, tipLength=0.2)
+    
+
     
     #Kalman:
     #2sigma-confidence Position (95%)
@@ -212,6 +214,8 @@ def draw_on_image(camera,Thymio,path_img):
     # sigma-confidence arc (95%)
     start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(2*np.sqrt(Thymio.kalman_P[2,2]))  # Start of the arc
     end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(2*np.sqrt(Thymio.kalman_P[2,2]))    # End of the arc
+    print(f"position before plot{Thymio.xytheta_est[:2]}")
+
     cv2.ellipse(image_cnt, Thymio.xytheta_est[:2].astype(int), (radius.astype(int), radius.astype(int)), 0, start_angle, end_angle, (255, 0, 127), 2)
     
 

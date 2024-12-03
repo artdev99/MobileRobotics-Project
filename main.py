@@ -12,8 +12,8 @@ CAMERA_INDEX = 1 #0 if no webcam
 CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
 CORNER_ARUCO_SIZE = 65          #[mm]
 MIN_SIZE = 500 #minimum blob size
-COLOR_OBSTACLE = np.array([[40,20,120,65,50,160]]) #BGR
-COLOR_GOAL = np.array([40,40,20,60,150,65])        #BGR
+COLOR_OBSTACLE = np.array([[30,20,120,65,50,170]]) #BGR
+COLOR_GOAL = np.array([30,40,20,80,150,65])        #BGR
 THYMIO_ID = 9
 GRID_L = 400 #[pixels]
 GRID_W = 300 #[pixels]
@@ -91,16 +91,20 @@ async def main():
         #Kalman Filter
         v_L=[]
         v_R=[]
-             
+        #print("before kalman")
         for _ in range(10): #remove some variance
+            #print("before wait ")
             await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
+            #print("after wait")
             v_L.append(node.v.motor.left.speed)
             v_R.append(node.v.motor.right.speed)
+            #print("after append speed")
         v_L=np.mean(v_L)
         v_R=np.mean(v_R)
         Thymio.kalman_predict_state(v_L,v_R) #Predict
         if Thymio.Thymio_detected: #only update if Thymio detected
             Thymio.kalman_update_state()
+        #print("after kalman")
 
         #Obstacle detection
         #TBD await get oprox sensor data
@@ -129,8 +133,9 @@ async def main():
                             break
                         Thymio.keypoints=Thymio.keypoints[1:]
                         Thymio.target_keypoint=Thymio.keypoints[0]
-
+                    #print("before moving")
                     v_m = Thymio.motion_control()
+                    print(f"v control {v_m}")
                     await node.set_variables(v_m)
                 
                 draw_on_image(cam,Thymio,path_img)

@@ -6,6 +6,7 @@ R_WHEEL = 43                             #wheels radius [mm]
 L_AXIS = 92                              #wheel axis length [mm]
 SPEED_LIMIT = 500                        #PWM
 SPEED_SCALING_FACTOR = 500/(200/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
+SPEED_SCALING_FACTOR_Kalman = 500/200
 SPEED = 70                               #[mm/s] 
         
 ########################
@@ -60,7 +61,7 @@ class Thymio_class:
             self.Thymio_detected=True
 
     def delta_time_update(self):
-        self.delta_t=time.time()-self.start_time
+        self.delta_t=(time.time()-self.start_time)
         self.start_time=time.time()
         
 #Kalman
@@ -69,30 +70,33 @@ class Thymio_class:
         Predict the next state
         """
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-        v_L=v_L/SPEED_SCALING_FACTOR #go from pwm to mm/s
-        v_R=v_R/SPEED_SCALING_FACTOR
+        print(f"Before scaling v_L {v_L} v_R {v_R}")
+        
+        v_L=v_L/SPEED_SCALING_FACTOR_Kalman #go from pwm to mm/s
+        v_R=v_R/SPEED_SCALING_FACTOR_Kalman
+        print(f"AFTER scaling v_L {v_L} v_R {v_R}")
         theta =self.xytheta_est[2]
-
+        
         # Compute linear and angular velocities
         v = (v_R + v_L) / 2
-        omega = (v_R - v_L) /self.kalman_wheel_base
+        omega = (v_L - v_R) /self.kalman_wheel_base
         #print(f"73{v}")
 
         # Update state
         delta_theta = omega * self.delta_t
-        theta_mid = theta + delta_theta / 2 #midpoint method (the robot is turning so nwe take avg angle)
+        theta_mid = theta + delta_theta / 2 #midpoint method (the robot is turning so we take avg angle)
         delta_x = v * np.cos(theta_mid) * self.delta_t
         delta_y = v * np.sin(theta_mid) * self.delta_t
         self.xytheta_est = self.xytheta_est + np.array([delta_x,delta_y,delta_theta])
         
         # Normalize angle to [-pi, pi]
-        self.xytheta_est[2] = (self.xytheta_est[2] + np.pi) % (2 * np.pi) - np.pi
+        self.xytheta_est[2] = normalize_angle(self.xytheta_est[2])
 
         """
         Predict the next covariance matrix
         """
         # Compute Jacobian and covariance matrix
-        G,Q = compute_G_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.Q)
+        G,Q = compute_G_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_Q)
 
 
         # Predict covariance
@@ -103,34 +107,37 @@ class Thymio_class:
     def kalman_update_state(self):
 
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-        H = np.eye(3) #We measure the states directly
-
+        self.xytheta_meas[:2]=self.xytheta_meas[:2]/self.pixbymm #go in mm
         # Innovation
-        y = self.xytheta_meas/self.pixbymm - H @ self.xytheta_est
+        
+        y = self.xytheta_meas - self.kalman_H @ self.xytheta_est
 
         # Normalize angle difference to [-pi, pi]
         y[2] = (y[2] + np.pi) % (2 * np.pi) - np.pi
 
         # Innovation covariance
-        S = H @ self.kalman_P @ H.T + self.kalman_R
+        S = self.kalman_H @ self.kalman_P @ self.kalman_H.T + self.kalman_R
 
         # Kalman gain
-        K = self.kalman_P @ H.T @ np.linalg.inv(S)
+        K = self.kalman_P @ self.kalman_H.T @ np.linalg.inv(S)
 
         # Update state estimate
         self.xytheta_est = self.xytheta_est + K @ y
         # Normalize angle to [-pi, pi]
-        self.xytheta_est[2] = (self.xytheta_est[2] + np.pi) % (2 * np.pi) - np.pi
+        self.xytheta_est[2] = normalize_angle(self.xytheta_est[2])
 
         # Update covariance estimate
-        self.kalman_P = (np.eye(3) - K @ H) @ self.kalman_P
+        self.kalman_P = (np.eye(3) - K @ self.kalman_H) @ self.kalman_P
+        
+        
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
+        self.xytheta_meas[:2]=self.xytheta_meas[:2]*self.pixbymm #go in pix
 
 #Motion control
     def adjust_units(self):
-        x_mm = ((self.xytheta_meas.flatten())[0])/self.pixbymm
-        y_mm = ((self.xytheta_meas.flatten())[1])/self.pixbymm
-        theta_rad = self.xytheta_meas.flatten()[2]
+        x_mm = ((self.xytheta_est.flatten())[0])/self.pixbymm
+        y_mm = ((self.xytheta_est.flatten())[1])/self.pixbymm
+        theta_rad = self.xytheta_est.flatten()[2]
         x_goal_mm=((self.target_keypoint.flatten())[0])/self.pixbymm
         y_goal_mm=((self.target_keypoint.flatten())[1])/self.pixbymm
         return x_mm, y_mm, theta_rad, x_goal_mm, y_goal_mm
