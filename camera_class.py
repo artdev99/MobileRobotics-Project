@@ -196,25 +196,21 @@ def draw_on_image(camera,Thymio,path_img):
         cv2.circle(image_cnt, Thymio.keypoints[i], 10, (200, 240, 190), -1)
     cv2.circle(image_cnt, Thymio.target_keypoint, 10, (0, 255, 255), -1)
 
+    radius=1.5*camera.size_aruco
     if Thymio.Thymio_detected:
-        Thymio_nose=1.5*camera.size_aruco*np.array([np.cos(Thymio.xytheta_meas[2]),np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
+        Thymio_nose=radius*np.array([np.cos(Thymio.xytheta_meas[2]),np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
         Thymio_nose=Thymio_nose+Thymio.xytheta_meas[:2]
         cv2.arrowedLine(image_cnt, Thymio.xytheta_meas[:2].astype(int),Thymio_nose.astype(int) , (255, 0, 255), 2, tipLength=0.2)
     
 
     
     #Kalman:
-    #sigma-confidence Position (68%)
-    Thymio_nose=1.5*camera.size_aruco*np.array([np.cos(Thymio.xytheta_est[2]),np.sin(Thymio.xytheta_est[2])]) #thymio is approx 1.5 aruco size
-    Thymio_nose=Thymio_nose+Thymio.xytheta_est[:2]
-    cv2.arrowedLine(image_cnt, Thymio.xytheta_est[:2].astype(int),Thymio_nose.astype(int) , (0, 255, 255), 2, tipLength=0.2)
-    print(f"radius {(2*np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int)}")
-    x_incetitude=(2*np.sqrt(Thymio.kalman_P[0,0])*Thymio.pixbymm).astype(int)
-    y_incetitude=(2*np.sqrt(Thymio.kalman_P[1,1])*Thymio.pixbymm).astype(int)
-    cv2.ellipse(image_cnt, Thymio.xytheta_est[:2].astype(int), (x_incetitude,y_incetitude),0,0,360, (0, 255, 255), 2)
-    #Angle:
-    radius=1.5*camera.size_aruco
+    #2sigma-confidence Position (95%)
+    #print(Thymio.xytheta_est[:2].astype(int))
+    #print((np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int))
     
+    cv2.circle(image_cnt, Thymio.xytheta_est[:2].astype(int), (2*np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int), (0, 255, 255), 2)
+    #Angle:
     # sigma-confidence arc (95%)
     start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(2*np.sqrt(Thymio.kalman_P[2,2]))  # Start of the arc
     end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(2*np.sqrt(Thymio.kalman_P[2,2]))    # End of the arc
