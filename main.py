@@ -18,7 +18,6 @@ THYMIO_ID = 9
 GRID_L = 400 #[pixels]
 GRID_W = 300 #[pixels]
 DISTANCE_THRESH = 75 #[mm]
-SCALING_FACTOR = 500/(200/43)
 ###########################################################
 #Main Code
 ###########################################################
@@ -76,8 +75,8 @@ async def main():
              
         for _ in range(10): #remove some variance
             await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
-            v_L.append(node.v.motor.left.speed/SCALING_FACTOR)
-            v_R.append(node.v.motor.right.speed/SCALING_FACTOR)
+            v_L.append(node.v.motor.left.speed)
+            v_R.append(node.v.motor.right.speed)
         v_L=np.mean(v_L)
         v_R=np.mean(v_R)
         Thymio.kalman_predict_state(v_L,v_R) #Predict
