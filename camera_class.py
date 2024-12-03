@@ -214,7 +214,7 @@ def draw_on_image(camera,Thymio,path_img):
     # sigma-confidence arc (95%)
     start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(2*np.sqrt(Thymio.kalman_P[2,2]))  # Start of the arc
     end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(2*np.sqrt(Thymio.kalman_P[2,2]))    # End of the arc
-    print(f"position before plot{Thymio.xytheta_est[:2]}")
+    #print(f"position before plot{Thymio.xytheta_est[:2]}")
 
     cv2.ellipse(image_cnt, Thymio.xytheta_est[:2].astype(int), (radius.astype(int), radius.astype(int)), 0, start_angle, end_angle, (255, 0, 127), 2)
     

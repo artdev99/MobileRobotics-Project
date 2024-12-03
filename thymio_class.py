@@ -28,8 +28,9 @@ class Thymio_class:
         self.kalman_wheel_base = 92 #mm
         self.kalman_Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
         self.kalman_R = np.diag([5, 5, np.deg2rad(5)])** 2  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.kalman_H=np.eye(3) 
         self.kalman_P=10*self.kalman_R
-        self.v_var=151 # (v_var=var_L+var_R)
+        #self.v_var=151 # (v_var=var_L+var_R)
 
     def Thymio_position_aruco(self,img):
 
@@ -70,11 +71,11 @@ class Thymio_class:
         Predict the next state
         """
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-        print(f"Before scaling v_L {v_L} v_R {v_R}")
+        #print(f"Before scaling v_L {v_L} v_R {v_R}")
         
         v_L=v_L/SPEED_SCALING_FACTOR_Kalman #go from pwm to mm/s
         v_R=v_R/SPEED_SCALING_FACTOR_Kalman
-        print(f"AFTER scaling v_L {v_L} v_R {v_R}")
+        #print(f"AFTER scaling v_L {v_L} v_R {v_R}")
         theta =self.xytheta_est[2]
         
         # Compute linear and angular velocities
