@@ -8,16 +8,16 @@ from path import *
 ###########################################################
 #Parameters
 ###########################################################
-camera_index=1 #0 if no webcam
-corner_aruco_id=[0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
-corner_aruco_size=65 #mm
-min_size=500 #minimum blob size
-thresh_obstacle=np.array([[40,20,120,65,50,160]]) #BGR
-thresh_goal=np.array([40,40,20,60,150,65]) #BGR
-Thymio_id=9
-grid_size0=400 #blocks? TBD numbers of blocks or pixels?
-grid_size1=300 #blocks? TBD numbers of blocks or pixels?
-keypoint_dist_thresh=75 #[mm]
+CAMERA_INDEX = 1 #0 if no webcam
+CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
+CORNER_ARUCO_SIZE = 65          #[mm]
+MIN_SIZE = 500 #minimum blob size
+COLOR_OBSTACLE = np.array([[40,20,120,65,50,160]]) #BGR
+COLOR_GOAL = np.array([40,40,20,60,150,65])        #BGR
+THYMIO_ID = 9
+GRID_L = 400 #[pixels]
+GRID_W = 300 #[pixels]
+DISTANCE_THRESH = 75 #[mm]
 SCALING_FACTOR = 500/(200/43)
 ###########################################################
 #Main Code
@@ -32,15 +32,14 @@ async def main():
     aw(node.lock())
 
     #Camera initialization
-    cam=camera_class(camera_index,corner_aruco_id,corner_aruco_size,min_size, thresh_obstacle, thresh_goal)
+    cam=camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL)
 
     #Thymio initialization
-    Thymio=Thymio_class(Thymio_id,cam)
+    Thymio=Thymio_class(THYMIO_ID,cam)
 
 
-    Path_planning=True #We want to have the path
+    Path_planning = True #We want to have the path
     step = 0
-    searching = True
     
     while True :
         step = step + 1
@@ -51,7 +50,7 @@ async def main():
         if Path_planning:
             if Thymio.target_keypoint==None: #only possible at first iteration to not take time later
                 do_plot=True
-            grid=discretize_image_eff(cam.thresholded_image,grid_size0, grid_size1)
+            grid=discretize_image_eff(cam.thresholded_image,GRID_L, GRID_W)
             #Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
             path, _, _ = a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio.xytheta_est[1],Thymio.xytheta_est[0]]),cam.persp_image,grid), grid1_coord2grid2_coord(np.array([cam.goal_center[1],cam.goal_center[0]]),cam.persp_image,grid),do_plot)
 
@@ -104,7 +103,7 @@ async def main():
                 if((step % 5)==0) :
                     #Next keypoint and controller:
                     #print("distance to keypoint: ", distance_to_goal(cam.pixbymm))
-                    if((Thymio.distance_to_goal(cam.pixbymm))<keypoint_dist_thresh) :
+                    if((Thymio.distance_to_goal())<DISTANCE_THRESH) :
                         if(len(Thymio.keypoints)<=1): #Thymio found the goal
                             aw(node.stop())
                             aw(node.unlock())
@@ -112,7 +111,7 @@ async def main():
                         Thymio.keypoints=Thymio.keypoints[1:]
                         Thymio.target_keypoint=Thymio.keypoints[0]
 
-                    v_m = Thymio.motion_control(cam.pixbymm)
+                    v_m = Thymio.motion_control()
                     await node.set_variables(v_m)
                 
                 draw_on_image(cam,Thymio,path_img)
