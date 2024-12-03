@@ -24,11 +24,30 @@ DISTANCE_THRESH = 75 #[mm]
 from tdmclient import ClientAsync, aw
 client = ClientAsync()
 
+async def wait_for_start_button(node):
+    print("Press center button to start the program")
+    while True:
+        await node.wait_for_variables({"buttons.forward"})
+        if node.v.buttons.forward == 1:  # Button pressed
+            print("Center button pressed. Starting the program...")
+            break
+        time.sleep(0.1)
+    
+async def check_stop_button(node):
+    await node.wait_for_variables({"buttons.forward"})
+    if (node.v.buttons.center) == 1:  # Button pressed
+        print("stopping")
+        return True
+    else :
+        return False
+
 async def main():
     cv2.destroyAllWindows()
 
     node = await client.wait_for_node()
     aw(node.lock())
+
+    wait_for_start_button(node)
 
     #Camera initialization
     cam=camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL)
@@ -104,6 +123,7 @@ async def main():
                     #print("distance to keypoint: ", distance_to_goal(cam.pixbymm))
                     if((Thymio.distance_to_goal())<DISTANCE_THRESH) :
                         if(len(Thymio.keypoints)<=1): #Thymio found the goal
+                            print("Mission accomplished")                            
                             aw(node.stop())
                             aw(node.unlock())
                             break
@@ -114,9 +134,14 @@ async def main():
                     await node.set_variables(v_m)
                 
                 draw_on_image(cam,Thymio,path_img)
+        if(check_stop_button(node)) :
+            aw(node.stop())
+            aw(node.unlock())
+            break
     cam.cam.release()
     #cv2.destroyAllWindows()
 
 # Run the main asynchronous function
-client.run_async_program(main)
-print("Mission accomplished")
+while True :
+    client.run_async_program(main)
+    
