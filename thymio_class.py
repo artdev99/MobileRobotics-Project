@@ -25,8 +25,8 @@ class Thymio_class:
         self.local_avoidance=False
         #Kalman
         self.kalman_wheel_base = 92 #mm
-        self.kalman_Q = np.diag([1.5, 1.5, np.deg2rad(5)]) ** 2
-        self.kalman_R = np.diag([1.5, 1.5, 0.0016])  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.kalman_Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
+        self.kalman_R = np.diag([5, 5, np.deg2rad(5)])** 2  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
         self.kalman_P=10*self.kalman_R
         self.v_var=151 # (v_var=var_L+var_R)
 
