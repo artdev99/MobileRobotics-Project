@@ -43,7 +43,11 @@ class Thymio_class:
         
         # Detect the markers
         gray_img=cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
+        if cv2.__version__ == "4.10.0":
+            _aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+            corners, ids, _ = _aruco_detector.detectMarkers(gray_img)
+        else:
+            corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
 
         if (ids is None) or (self.Thymio_ID not in ids):
             self.Thymio_detected=False

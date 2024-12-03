@@ -157,7 +157,11 @@ def find_aruco_corners_size(image):
     
     # Detect the markers
     gray_img=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
+    if cv2.__version__ == "4.10.0":
+        _aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+        corners, ids, _ = _aruco_detector.detectMarkers(gray_img)
+    else:
+        corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
     if len(ids)<4:
         raise ValueError("Not enough corners detected for perspective")
     inner_corners = []
