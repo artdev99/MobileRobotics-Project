@@ -125,27 +125,27 @@ class Thymio_class:
         self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
 
 #Motion control
-    def adjust_units(self, pixbymm):
-        x_mm = pixel_to_mm((self.xytheta_meas.flatten())[0], pixbymm)
-        y_mm = pixel_to_mm((self.xytheta_meas.flatten())[1], pixbymm)
+    def adjust_units(self):
+        x_mm = ((self.xytheta_meas.flatten())[0])/self.pixbymm
+        y_mm = ((self.xytheta_meas.flatten())[1])/self.pixbymm
         theta_rad = self.xytheta_meas.flatten()[2]
-        x_goal_mm=pixel_to_mm((self.target_keypoint.flatten())[0], pixbymm)
-        y_goal_mm=pixel_to_mm((self.target_keypoint.flatten())[1], pixbymm)
+        x_goal_mm=((self.target_keypoint.flatten())[0])/self.pixbymm
+        y_goal_mm=((self.target_keypoint.flatten())[1])/self.pixbymm
         return x_mm, y_mm, theta_rad, x_goal_mm, y_goal_mm
     
-    def distance_to_goal(self, pixbymm):
-        x, y, _, x_goal, y_goal = self.adjust_units(pixbymm)
+    def distance_to_goal(self):
+        x, y, _, x_goal, y_goal = self.adjust_units()
         delta_x = x_goal - x #[mm]
         delta_y = y_goal - y #[mm]
         distance_to_goal = np.sqrt( (delta_x)**2 + (delta_y)**2 ) #[mm]
         return distance_to_goal
 
-    def motion_control(self, pixbymm):
+    def motion_control(self):
 
         k_alpha = 0.4   #controls rotational velocity 
         k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
-        x, y, theta, x_goal, y_goal = self.adjust_units(pixbymm)
+        x, y, theta, x_goal, y_goal = self.adjust_units()
 
         delta_x = x_goal - x #[mm]
         delta_y = y_goal - y #[mm]
@@ -188,10 +188,6 @@ def limit_speed(v):
     if(v<-SPEED_LIMIT) :
         v=-SPEED_LIMIT
     return v
-    
-def pixel_to_mm(value_pixel, pixbymm):
-    value_mm = value_pixel/pixbymm
-    return value_mm #[mm]
         
 def compute_F_Q(theta,v_L,v_R,wheel_base,dt,process_cov,v_var):
     """
