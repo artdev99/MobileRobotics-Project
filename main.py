@@ -65,6 +65,16 @@ async def main():
         COLOR_OBSTACLE,
         COLOR_GOAL,
     )
+    while not cam.corners_found:
+        cam = camera_class(
+        CAMERA_INDEX,
+        CORNER_ARUCO_ID,
+        CORNER_ARUCO_SIZE,
+        MIN_SIZE,
+        COLOR_OBSTACLE,
+        COLOR_GOAL,
+    )
+
 
     # Thymio initialization
     Thymio = Thymio_class(THYMIO_ID, cam)

@@ -20,8 +20,8 @@ class Thymio_class:
 
         self.Thymio_ID = Thymio_id
         self.Thymio_position_aruco(cam.persp_image)
-        self.pixbymm = cam.pixbymm
-        self.xytheta_est = self.xytheta_meas
+        self.pixbymm = None
+        self.xytheta_est = None
         self.start_time = time.time()
         self.delta_t = 0
         self.keypoints = None
