@@ -2,12 +2,9 @@ import cv2
 import numpy as np
 import time
 
-R_WHEEL = 43                             #wheels radius [mm]
-L_AXIS = 92                              #wheel axis length [mm]
-SPEED_LIMIT = 500                        #PWM
-SPEED_SCALING_FACTOR = 500/(200/R_WHEEL) #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
-SPEED_SCALING_FACTOR_Kalman = 500/200
-SPEED = 50                               #[mm/s] 
+L_AXIS = 92                    #wheel axis length [mm]
+SPEED_SCALING_FACTOR = 500/200 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
+SPEED = 50                     #[mm/s] 
         
 ########################
 #Thymio class
@@ -23,11 +20,9 @@ class Thymio_class:
         self.delta_t=0
         self.keypoints=None
         self.target_keypoint=None
-        self.local_avoidance=False
         self.xytheta_meas_hist=np.empty((0,3))
         self.xytheta_est_hist=np.empty((0,3))
         #Kalman
-        self.kalman_wheel_base = 92 #mm
         self.kalman_Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
         self.kalman_R = np.diag([5, 5, np.deg2rad(5)])** 2  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
         self.kalman_H=np.eye(3) 
@@ -79,14 +74,14 @@ class Thymio_class:
         self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
         #print(f"Before scaling v_L {v_L} v_R {v_R}")
         
-        v_L=v_L/SPEED_SCALING_FACTOR_Kalman #go from pwm to mm/s
-        v_R=v_R/SPEED_SCALING_FACTOR_Kalman
+        v_L=v_L/SPEED_SCALING_FACTOR #go from pwm to mm/s
+        v_R=v_R/SPEED_SCALING_FACTOR
         #print(f"AFTER scaling v_L {v_L} v_R {v_R}")
         theta =self.xytheta_est[2]
         
         # Compute linear and angular velocities
         v = (v_R + v_L) / 2
-        omega = (v_L - v_R) /self.kalman_wheel_base
+        omega = (v_L - v_R) /L_AXIS
         #print(f"73{v}")
 
         # Update state
@@ -103,7 +98,7 @@ class Thymio_class:
         Predict the next covariance matrix
         """
         # Compute Jacobian and covariance matrix
-        G,Q = compute_G_Q(self.xytheta_est[2],v_L,v_R,self.kalman_wheel_base,self.delta_t,self.kalman_Q)
+        G,Q = compute_G_Q(self.xytheta_est[2],v_L,v_R,L_AXIS,self.delta_t,self.kalman_Q)
 
 
         # Predict covariance
@@ -158,7 +153,7 @@ class Thymio_class:
 
     def motion_control(self):
 
-        k_alpha = 0.35   #controls rotational velocity 
+        k_alpha = 0.35  #controls rotational velocity 
         k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
         x, y, theta, x_goal, y_goal = self.adjust_units()
@@ -172,24 +167,10 @@ class Thymio_class:
         omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta)  #rotational velocity [rad/s]
 
         #Calculate motor speed
-        w_ml = (v+omega*L_AXIS)/R_WHEEL #[rad/s]
-        w_mr = (v-omega*L_AXIS)/R_WHEEL #[rad/s]
+        v_ml = (v+omega*L_AXIS)*SPEED_SCALING_FACTOR #PWM
+        v_mr = (v-omega*L_AXIS)*SPEED_SCALING_FACTOR #PWM
 
-        v_ml = w_ml*SPEED_SCALING_FACTOR #PWM
-        v_mr = w_mr*SPEED_SCALING_FACTOR #PWM
-
-        v_ml = limit_speed(v_ml)
-        v_mr = limit_speed(v_mr)
-
-        v_ml = int(v_ml)  #ensure integer type
-        v_mr = int(v_mr)  #ensure integer type
-
-        v_m = {
-            "motor.left.target": [v_ml],
-            "motor.right.target": [v_mr],
-        }
-
-        return v_m
+        return v_ml, v_mr
 
 def normalize_angle(angle): #restricts angle [rad] between -pi and pi
     while angle > np.pi:
@@ -198,13 +179,6 @@ def normalize_angle(angle): #restricts angle [rad] between -pi and pi
         angle += 2 * np.pi
     return angle
 
-def limit_speed(v):
-    if(v>SPEED_LIMIT) :
-        v=SPEED_LIMIT
-    if(v<-SPEED_LIMIT) :
-        v=-SPEED_LIMIT
-    return v
-        
 def compute_G_Q(theta,v_L,v_R,wheel_base,dt,process_cov):
     """
     Compute the Jacobian G and covariance matrix Q
