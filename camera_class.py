@@ -203,9 +203,9 @@ def find_aruco_corners_size(image):
         )
     if len(ids) < 4:
         raise ValueError("Not enough corners detected for perspective")
-    inner_corners = []
+    outer_corners = []
 
-        corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
+    corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
     
     outer_corners = []
     # Define the order of markers: top-left, bottom-left, bottom-right, top-right
