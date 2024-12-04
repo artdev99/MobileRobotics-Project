@@ -131,6 +131,7 @@ async def main():
         # Thymio Position and motor
         Thymio.Thymio_position_aruco(cam.persp_image)
         Thymio.delta_time_update()
+        print(f"Time for the loop:{Thymio.delta_t}")
 
         # Kalman Filter
         v_L = []
