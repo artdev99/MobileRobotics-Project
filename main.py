@@ -8,6 +8,7 @@ from braitenberg import *
 from motion_control import *
 from motors import *
 from buttons import*
+from drawings import *
 
 ###########################################################
 #Parameters
