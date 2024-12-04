@@ -266,22 +266,40 @@ def draw_on_image(camera, Thymio, path_img):
 
     # Kalman:
     # 2sigma-confidence Position (95%)
+    
+    eigenvalues, eigenvectors = np.linalg.eigh(Thymio.kalman_P[:2,:2])# Compute max variance direction and value
 
+    # Sort eigenvalues and eigenvectors in descending order
+    sorted_indices = np.argsort(eigenvalues)[::-1]
+    eigenvalues = eigenvalues[sorted_indices]
+    eigenvectors = eigenvectors[:, sorted_indices]
+
+    max_variance_direction = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0])) 
+
+    # Draw the variance ellipse
+    cv2.ellipse(image_cnt,
+                Thymio.xytheta_est[:2].astype(int),
+                (2 * np.sqrt(eigenvalues[0]).astype(int), 2 * np.sqrt(eigenvalues[1]).astype(int)),
+                max_variance_direction, 0, 360, (0, 255, 255), 2)
+    '''
     cv2.circle(
         image_cnt,
         Thymio.xytheta_est[:2].astype(int),
-        (2 * np.sqrt(Thymio.kalman_P[2, 2]) * Thymio.pixbymm).astype(int),
+        (2 * np.sqrt(Thymio.kalman_P[1, 1]) * Thymio.pixbymm).astype(int),
         (0, 255, 255),
         2,
     )
+    '''
     # Angle:
     # sigma-confidence arc (95%)
-    start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(
+    # Start of the arc:
+    start_angle = np.max([np.degrees(Thymio.xytheta_est[2]) - np.degrees(
         2 * np.sqrt(Thymio.kalman_P[2, 2])
-    )  # Start of the arc
-    end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(
+    ),0])
+    # End of the arc
+    end_angle = np.min([np.degrees(Thymio.xytheta_est[2]) + np.degrees(
         2 * np.sqrt(Thymio.kalman_P[2, 2])
-    )  # End of the arc
+    ),360])
 
     cv2.ellipse(
         image_cnt,
