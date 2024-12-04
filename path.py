@@ -136,7 +136,6 @@ def a_star_search(map_grid, start, goal, do_plot):
         )  # Return reversed path, explored cells and cost_map for visualization
     else:
         return False, 0, 0, 0
-        # raise ValueError("No path found")
 
 
 def grid1_coord2grid2_coord(coord, grid1, grid2):

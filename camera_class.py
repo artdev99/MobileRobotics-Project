@@ -36,21 +36,23 @@ class camera_class:
         self.corner_aruco_id = corner_aruco_id
         self.correct_perspective_aruco(get_matrix=True)
         self.pixbymm = self.size_aruco / corner_aruco_size
-        # We get the image with expanded obstacles and all the contours
-        (
-            self.thresholded_image,
-            self.obstacle_cnt,
-            self.obstacle_cnt_expnded,
-            self.goal_cnt,
-            self.goal_center,
-        ) = full_detection_cnt_centroid(
-            self.persp_image,
-            thresh_obstacle,
-            thresh_goal,
-            min_size,
-            self.size_aruco,
-            corner_aruco_size,
-        )
+
+        if self.corners_found:
+            # We get the image with expanded obstacles and all the contours
+            (
+                self.thresholded_image,
+                self.obstacle_cnt,
+                self.obstacle_cnt_expnded,
+                self.goal_cnt,
+                self.goal_center,
+            ) = full_detection_cnt_centroid(
+                self.persp_image,
+                thresh_obstacle,
+                thresh_goal,
+                min_size,
+                self.size_aruco,
+                corner_aruco_size,
+            )
 
     def get_image(self, distortion=False, alpha=1):
         ret, self.image = self.cam.read()
@@ -64,8 +66,7 @@ class camera_class:
     def correct_perspective_aruco(self, get_matrix=False) -> np.ndarray:
         if get_matrix:
 
-            corners, self.size_aruco = find_aruco_corners_size(self.image)
-
+            corners, self.size_aruco, self.corners_found = find_aruco_corners_size(self.image)
             ordered_corners = order_points(corners)
             self.max_width_perspective, self.max_height_perspective = (
                 compute_destination_size(ordered_corners)
@@ -201,19 +202,15 @@ def find_aruco_corners_size(image):
         corners, ids, _ = cv2.aruco.detectMarkers(
             gray_img, aruco_dict, parameters=parameters
         )
-    if len(ids) < 4:
-        raise ValueError("Not enough corners detected for perspective")
-    outer_corners = []
 
-    corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
-    
     outer_corners = []
+    corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
     # Define the order of markers: top-left, bottom-left, bottom-right, top-right
     marker_order = [0, 1, 2, 10]
     aruco_corner = [0, 3, 2, 1]  # top-left, bottom-left, bottom-right, top-right of each aruco
     missing = [elem for elem in marker_order if elem not in ids]
     if len(missing)>0:
-        raise ValueError(f"The following corners are missing: {missing}")
+        return -1,-1, False
 
     for marker_id, corner_pos in zip(marker_order, aruco_corner):
 
@@ -229,7 +226,7 @@ def find_aruco_corners_size(image):
             np.linalg.norm(corners[i][0, 3, :] - corners[i][0, 0, :]),  # Left side
         ]
         size_aruco.append(np.mean(side_lengths))
-    return np.array(outer_corners), np.mean(size_aruco)
+    return np.array(outer_corners), np.mean(size_aruco), True
 
 
 def draw_on_image(camera, Thymio, path_img):

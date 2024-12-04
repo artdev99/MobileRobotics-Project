@@ -104,7 +104,6 @@ async def main():
                 print("couldn't find path, stopping the mission")
                 aw(node.stop())
                 aw(node.unlock())
-                # draw_history(cam,Thymio,path_img, keypoints) #crash if no path ever
                 break
 
             # Convert path coordinates for plotting
