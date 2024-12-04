@@ -3,12 +3,9 @@ import numpy as np
 from heapq import heappush, heappop
 import matplotlib.pyplot as plt
 
-ANGLE_THRESHOLD = np.radians(
-    20
-)  # threshold under which changes of directions are ignored [rad]
-STEP = 15  # step (in number of cells) between each cell we study
-COUNTER_THRESHOLD = 7  # max number of steps between keypoints
-
+ANGLE_THRESHOLD = np.radians(20)   # threshold under which changes of directions are ignored [rad]
+STEP = 15                          # step (in number of cells) between each cell we study
+COUNTER_THRESHOLD = 7              # max number of steps between keypoints
 
 def discretize_image_eff(image, grid_size0, grid_size1):
 
@@ -24,7 +21,6 @@ def discretize_image_eff(image, grid_size0, grid_size1):
     obstacle_grid = -2 * resized_mask + 1  # -1 obstacle, 1 rest
 
     return obstacle_grid
-
 
 def heuristic(a, b):
     # Euclidian Distance
@@ -107,6 +103,7 @@ def a_star_search(map_grid, start, goal, do_plot):
         while path[-1] != start:
             path.append(came_from[path[-1]])
         path = np.array(path[::-1]).T
+        path = np.array(path[::-1]).T
         if do_plot:
             plt.figure(figsize=(10, 10))
             plt.imshow(map_grid, cmap="Greys", origin="lower")
@@ -162,7 +159,7 @@ def find_keypoints(path):
     if len(path) < 3:
         return path
 
-    keypoints = []
+    keypoints = [path[0]] 
     counter = 1
 
     for i in range(STEP, len(path) - STEP, STEP):
