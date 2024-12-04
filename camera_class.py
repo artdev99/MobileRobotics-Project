@@ -64,7 +64,6 @@ class camera_class:
         #    self.image = self.correct_camera_distortion(self.image, alpha)
 
     def correct_perspective_aruco(self, get_matrix=False) -> np.ndarray:
-    def correct_perspective_aruco(self, get_matrix=False) -> np.ndarray:
         if get_matrix:
 
             corners, self.size_aruco, self.corners_found = find_aruco_corners_size(self.image)

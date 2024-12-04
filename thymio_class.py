@@ -18,7 +18,7 @@ class Thymio_class:
         self.Thymio_ID = Thymio_id
         self.Thymio_position_aruco(cam.persp_image)
         self.pixbymm = cam.pixbymm
-        self.xytheta_est = None
+        self.xytheta_est = self.xytheta_meas
         self.start_time = time.time()
         self.delta_t = 0
         self.keypoints = None
@@ -137,7 +137,7 @@ class Thymio_class:
             self.xytheta_est[2],
             v_L,
             v_R,
-            self.kalman_wheel_base,
+            L_AXIS,
             self.delta_t,
             self.kalman_Q,
         )
