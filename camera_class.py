@@ -162,20 +162,20 @@ def find_aruco_corners_size(image):
         corners, ids, _ = _aruco_detector.detectMarkers(gray_img)
     else:
         corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
-    if len(ids)<4:
-        raise ValueError("Not enough corners detected for perspective")
-    inner_corners = []
-
+    
+    outer_corners = []
     # Define the order of markers: top-left, bottom-left, bottom-right, top-right
     marker_order = [0, 1, 2, 10]
-    aruco_corner = [2, 1, 0, 3]  # Bottom-right, top-right, top-left, bottom-left of each aruco
-    aruco_corner = [0, 3, 2, 1]  # Bottom-right, top-right, top-left, bottom-left of each aruco
+    aruco_corner = [0, 3, 2, 1]  # top-left, bottom-left, bottom-right, top-right of each aruco
+    missing = [elem for elem in marker_order if elem not in ids]
+    if len(missing)>0:
+        raise ValueError(f"The following corners are missing: {missing}")
 
     for marker_id, corner_pos in zip(marker_order, aruco_corner):
 
         idx = np.where(ids == marker_id)[0][0]
         # Get the inner corner
-        inner_corners.append(corners[idx][0,corner_pos,:])
+        outer_corners.append(corners[idx][0,corner_pos,:])
     size_aruco=[]
     for i in range(4):
         side_lengths = [
@@ -185,7 +185,7 @@ def find_aruco_corners_size(image):
             np.linalg.norm(corners[i][0,3,:] - corners[i][0,0,:])   # Left side
         ]
         size_aruco.append(np.mean(side_lengths))
-    return np.array(inner_corners), np.mean(size_aruco)
+    return np.array(outer_corners), np.mean(size_aruco)
 
 
 
