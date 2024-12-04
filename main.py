@@ -20,7 +20,7 @@ COLOR_GOAL = np.array([30,40,20,80,150,65])        #BGR
 THYMIO_ID = 9
 GRID_L = 400  # [pixels]
 GRID_W = 300  # [pixels]
-DISTANCE_THRESH = 65  # [mm]
+DISTANCE_THRESH = 75  # [mm]
 ###########################################################
 # Main Code
 ###########################################################
@@ -76,7 +76,7 @@ async def main():
         cam.get_image()
         cam.correct_perspective_aruco(get_matrix = False)
         
-        Thymio.Thymio_position_aruco(cam.persp_image)
+        #Thymio.Thymio_position_aruco(cam.persp_image)
         
         #Path Planning
         if path_planning:

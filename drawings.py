@@ -6,17 +6,21 @@ def draw_on_image(camera, Thymio, path_img):
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0, 255, 0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0, 0, 255), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt_expnded, -1, (0, 100, 255), 3)
-    cv2.polylines(
-        image_cnt,
-        [path_img.T.reshape(-1, 1, 2)],
-        isClosed=False,
-        color=(255, 0, 0),
-        thickness=3,
-    )
+    
+    if (path_img is not None): 
+        cv2.polylines(
+            image_cnt,
+            [path_img.T.reshape(-1, 1, 2)],
+            isClosed=False,
+            color=(255, 0, 0),
+            thickness=3,
+        )
     cv2.circle(image_cnt, camera.goal_center.flatten(), 10, (0, 255, 0), -1)
-    for i in range(len(Thymio.keypoints)):
-        cv2.circle(image_cnt, Thymio.keypoints[i], 10, (200, 240, 190), -1)
-    cv2.circle(image_cnt, Thymio.target_keypoint, 10, (0, 255, 255), -1)
+    
+    if(Thymio.keypoints is not None):
+        for i in range(len(Thymio.keypoints)):
+            cv2.circle(image_cnt, Thymio.keypoints[i], 10, (200, 240, 190), -1)
+        cv2.circle(image_cnt, Thymio.target_keypoint, 10, (0, 255, 255), -1)
 
     radius = 1.5 * camera.size_aruco
     if Thymio.Thymio_detected:
@@ -80,7 +84,6 @@ def draw_on_image(camera, Thymio, path_img):
         (255, 0, 127),
         2,
     )
-
     cv2.imshow("Camera View", image_cnt)
     cv2.waitKey(1)
 

@@ -11,7 +11,7 @@ class camera_class:
         self,
         camera_index=1,
         corner_aruco_id=[0, 1, 2, 10],
-        corner_aruco_size=70,
+        corner_aruco_size=66,
         min_size=5000,
         thresh_obstacle=np.array([0, 0, 120, 0, 0, 140]),
         thresh_goal=np.array([0, 120, 0, 0, 140, 0]),
@@ -53,6 +53,8 @@ class camera_class:
                 self.size_aruco,
                 corner_aruco_size,
             )
+        else:
+            self.cam.release()
 
     def get_image(self, distortion=False, alpha=1):
         ret, self.image = self.cam.read()
@@ -67,6 +69,8 @@ class camera_class:
         if get_matrix:
 
             corners, self.size_aruco, self.corners_found = find_aruco_corners_size(self.image)
+            if(not self.corners_found):
+                return;
             ordered_corners = order_points(corners)
             self.max_width_perspective, self.max_height_perspective = (
                 compute_destination_size(ordered_corners)
@@ -213,6 +217,7 @@ def find_aruco_corners_size(image):
     aruco_corner = [0, 3, 2, 1]  # top-left, bottom-left, bottom-right, top-right of each aruco
     missing = [elem for elem in marker_order if elem not in ids]
     if len(missing)>0:
+        print("Corners are missing")
         return -1,-1, False
 
     for marker_id, corner_pos in zip(marker_order, aruco_corner):

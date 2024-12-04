@@ -4,7 +4,7 @@ from heapq import heappush, heappop
 import matplotlib.pyplot as plt
 
 ANGLE_THRESHOLD = np.radians(20)   # threshold under which changes of directions are ignored [rad]
-STEP = 15                          # step (in number of cells) between each cell we study
+STEP = 6                          # step (in number of cells) between each cell we study
 COUNTER_THRESHOLD = 7              # max number of steps between keypoints
 
 def discretize_image_eff(image, grid_size0, grid_size1):
@@ -102,7 +102,6 @@ def a_star_search(map_grid, start, goal, do_plot):
         path = [goal]
         while path[-1] != start:
             path.append(came_from[path[-1]])
-        path = np.array(path[::-1]).T
         path = np.array(path[::-1]).T
         if do_plot:
             plt.figure(figsize=(10, 10))

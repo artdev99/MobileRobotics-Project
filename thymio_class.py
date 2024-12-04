@@ -3,7 +3,7 @@ import numpy as np
 import time
 
 L_AXIS = 92                    #wheel axis length [mm]
-SPEED_SCALING_FACTOR = 500/200 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
+SPEED_SCALING_FACTOR = 526/200 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
 KIDNAPPING_THRESHOLD = 800 #TO DO : DETERMINE THIS THRESHOLD
                             #acc : -32 to 32
                             #prox.ground.sensor : 0 to 1000 ??
@@ -27,9 +27,9 @@ class Thymio_class:
         self.xytheta_meas_hist = np.empty((0, 3))
         self.xytheta_est_hist = np.empty((0, 3))
         # Kalman
-        self.kalman_Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
+        self.kalman_Q = np.diag([7.5, 7.5, np.deg2rad(5)]) ** 2
         self.kalman_R = (
-            np.diag([5, 5, np.deg2rad(5)]) ** 2
+            np.diag([5, 5, np.deg2rad(1)]) ** 2
         )  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
         self.kalman_H = np.eye(3)
         self.kalman_P = 10 * self.kalman_R
@@ -100,30 +100,20 @@ class Thymio_class:
         Predict the next state
         """
         self.xytheta_est[:2] = self.xytheta_est[:2] / self.pixbymm  # go in mm
-        # print(f"Before scaling v_L {v_L} v_R {v_R}")
 
         v_L = v_L / SPEED_SCALING_FACTOR  # go from pwm to mm/s
         v_R = v_R / SPEED_SCALING_FACTOR
-        # print(f"AFTER scaling v_L {v_L} v_R {v_R}")
         theta = self.xytheta_est[2]
 
         # Compute linear and angular velocities
         v = (v_R + v_L) / 2
         omega = (v_L - v_R) / L_AXIS
-        # print(f"73{v}")
 
         # Update state
         delta_theta = omega * self.delta_t
-        theta_mid = (
-            theta + delta_theta / 2
-        )  # midpoint method (the robot is turning so we take avg angle)
-        theta_mid = (
-            theta + delta_theta / 2
-        )  # midpoint method (the robot is turning so we take avg angle)
+        theta_mid = theta + delta_theta / 2 # midpoint method (the robot is turning so we take avg angle)
         delta_x = v * np.cos(theta_mid) * self.delta_t
         delta_y = v * np.sin(theta_mid) * self.delta_t
-        self.xytheta_est = self.xytheta_est + np.array([delta_x, delta_y, delta_theta])
-
         self.xytheta_est = self.xytheta_est + np.array([delta_x, delta_y, delta_theta])
 
         # Normalize angle to [-pi, pi]
@@ -145,17 +135,13 @@ class Thymio_class:
         # Predict covariance
         self.kalman_P = G @ self.kalman_P @ G.T + Q
         self.xytheta_est[:2] = self.xytheta_est[:2] * self.pixbymm  # go in pix
-        self.xytheta_est[:2] = self.xytheta_est[:2] * self.pixbymm  # go in pix
 
     def kalman_update_state(self):
 
         self.xytheta_est[:2] = self.xytheta_est[:2] / self.pixbymm  # go in mm
         self.xytheta_meas[:2] = self.xytheta_meas[:2] / self.pixbymm  # go in mm
-        self.xytheta_est[:2] = self.xytheta_est[:2] / self.pixbymm  # go in mm
-        self.xytheta_meas[:2] = self.xytheta_meas[:2] / self.pixbymm  # go in mm
+
         # Innovation
-
-
         y = self.xytheta_meas - self.kalman_H @ self.xytheta_est
 
         # Normalize angle difference to [-pi, pi]
