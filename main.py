@@ -30,6 +30,7 @@ from tdmclient import ClientAsync, aw
 client = ClientAsync()
 
 async def main():
+
     node = await client.wait_for_node()
     aw(node.lock())
     
@@ -44,13 +45,14 @@ async def main():
     cam = Camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL) #Camera initialization   
     Thymio = Thymio_class(THYMIO_ID, cam) #Thymio initialization
 
-    path_planning = True #We want to have the path
+    path_planning = True
     local_avoidance = False
     step = 0
     
     while True :    
         step = step + 1
 
+        #Check kidnapping
         if(check_kidnapping(node)):
             kidnapped = True
             await set_motors(node, 0, 0)
@@ -58,10 +60,12 @@ async def main():
         if(kidnapped):
             kidnapped = False
             path_planning = True
+            time.sleep(2)
         
         #Update Image
         cam.get_image()
         cam.correct_perspective_aruco(get_matrix = False)
+
         #Path Planning
         if path_planning:
             if Thymio.target_keypoint is None or not np.any(Thymio.target_keypoint):
@@ -71,7 +75,7 @@ async def main():
             found, path, _, _ = a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio.xytheta_est[1], Thymio.xytheta_est[0]]), cam.persp_image, grid), grid1_coord2grid2_coord(np.array([cam.goal_center[1], cam.goal_center[0]]), cam.persp_image,grid), do_plot)
             
             if(not found):
-                print("couldn't find path, stopping the mission")
+                print("couldn't find path, stopping the program")
                 aw(node.stop())
                 aw(node.unlock())
                 #draw_history(cam,Thymio,path_img, keypoints) #crash if no path ever
@@ -93,8 +97,8 @@ async def main():
 
         #Kalman Filter
         v_L, v_R = await gather_data(node)
-        Thymio.kalman_predict_state(v_L, v_R)  # Predict
-        if Thymio.Thymio_detected:  # only update if Thymio detected
+        Thymio.kalman_predict_state(v_L, v_R)  
+        if Thymio.Thymio_detected:  #only update if Thymio detected
             Thymio.kalman_update_state()
 
         #Update history for final plot
@@ -111,7 +115,7 @@ async def main():
                 prox_values = await get_prox(node, client)
                 v_ml, v_mr = avoid_obstacle(prox_values)
                 await set_motors(node, v_ml, v_mr)
-            await set_motors(node, 50, 50)
+            await set_motors(node, 50, 50) #move forward to leave the obstacle behind while recalculating path
             #time.sleep(0.2)
             draw_on_image(cam, Thymio, path_img)
             continue
@@ -122,6 +126,8 @@ async def main():
                 local_avoidance = False
                 draw_on_image(cam, Thymio, path_img)
                 continue
+        
+        #Motion control    
             else:
                 if((step % 5) == 0):
                     #print("distance to keypoint: ", distance_to_goal(cam.pixbymm))
@@ -136,13 +142,15 @@ async def main():
                         Thymio.target_keypoint = Thymio.keypoints[0]
                     v_ml, v_mr = motion_control(Thymio)
                     await set_motors(node, v_ml, v_mr)
-                
                 draw_on_image(cam, Thymio, path_img)
+
+        #Check stop
         if(await check_stop_button(node, client)):
             aw(node.stop())
             aw(node.unlock())
             draw_history(cam, Thymio, path_img, keypoints)
             break
+
     cam.cam.release()
     #cv2.destroyAllWindows()
 
