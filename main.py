@@ -95,10 +95,10 @@ async def main():
         
         #Obstacle detection
         prox_values = await get_prox(node, client)
-        if (check_obstacle(prox_values)):
+        if (await check_obstacle(prox_values), node):
             print("obstacle")
             local_avoidance = True
-            while (check_obstacle(prox_values)):
+            while (await check_obstacle(prox_values)):
                 prox_values = await get_prox(node, client)
                 v_ml, v_mr = avoid_obstacle(prox_values)
                 await set_motors(node, v_ml, v_mr)
