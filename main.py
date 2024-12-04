@@ -6,6 +6,7 @@ from thymio_class import *
 from path import *
 from braitenberg import *
 from kalman import *
+from motion_control import *
 from motors import *
 from buttons import*
 
@@ -129,7 +130,7 @@ async def main():
                             break
                         Thymio.keypoints = Thymio.keypoints[1:]
                         Thymio.target_keypoint = Thymio.keypoints[0]
-                    await set_motors(node, Thymio.motion_control())
+                    await set_motors(node, motion_control(Thymio))
                 
                 draw_on_image(cam, Thymio, path_img)
         if(await check_stop_button(node, client)):

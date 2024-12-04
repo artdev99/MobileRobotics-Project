@@ -2,9 +2,7 @@ import cv2
 import numpy as np
 
 from constants import *
-
-SPEED = 50                     #[mm/s] 
-        
+       
 ########################
 #Thymio class
 ########################
@@ -53,8 +51,7 @@ class Thymio_class:
             self.xytheta_meas = np.array([Thymio_x,Thymio_y,angle])
             self.Thymio_detected=True
         
-#Motion control
-    def adjust_units(self):
+    def get_data_mm(self):
         x_mm = ((self.xytheta_est.flatten())[0])/self.pixbymm
         y_mm = ((self.xytheta_est.flatten())[1])/self.pixbymm
         theta_rad = self.xytheta_est.flatten()[2]
@@ -63,29 +60,8 @@ class Thymio_class:
         return x_mm, y_mm, theta_rad, x_goal_mm, y_goal_mm
     
     def distance_to_goal(self):
-        x, y, _, x_goal, y_goal = self.adjust_units()
+        x, y, _, x_goal, y_goal = self.get_data_mm()
         delta_x = x_goal - x #[mm]
         delta_y = y_goal - y #[mm]
         distance_to_goal = np.sqrt( (delta_x)**2 + (delta_y)**2 ) #[mm]
         return distance_to_goal
-
-    def motion_control(self):
-
-        k_alpha = 0.35  #controls rotational velocity 
-        k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
-
-        x, y, theta, x_goal, y_goal = self.adjust_units()
-
-        delta_x = x_goal - x #[mm]
-        delta_y = y_goal - y #[mm]
-
-        delta_angle = normalize_angle(np.arctan2(delta_y, delta_x) - theta) #difference between the robot's orientation and the direction of the goal [rad]
-
-        v = SPEED                                                   #translational velocity [mm/s]
-        omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta)  #rotational velocity [rad/s]
-
-        #Calculate motor speed
-        v_ml = (v+omega*L_AXIS)*SPEED_SCALING_FACTOR #PWM
-        v_mr = (v-omega*L_AXIS)*SPEED_SCALING_FACTOR #PWM
-
-        return v_ml, v_mr
