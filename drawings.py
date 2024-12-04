@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-def draw_on_image(camera,Thymio,kalman,path_img):
+def draw_on_image(camera, Thymio, kalman, path_img):
     image_cnt = camera.persp_image.copy()
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0,255,0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
@@ -12,7 +12,7 @@ def draw_on_image(camera,Thymio,kalman,path_img):
         cv2.circle(image_cnt, Thymio.keypoints[i], 10, (200, 240, 190), -1)
     cv2.circle(image_cnt, Thymio.target_keypoint, 10, (0, 255, 255), -1)
 
-    radius = 1.5*camera.size_aruco
+    radius = 1.5 * camera.size_aruco
     if Thymio.Thymio_detected:
         Thymio_nose = radius*np.array([np.cos(Thymio.xytheta_meas[2]), np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
         Thymio_nose = Thymio_nose + Thymio.xytheta_meas[:2]

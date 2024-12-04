@@ -42,7 +42,7 @@ async def main():
     print("Starting the program")
 
     cam = Camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL) #Camera initialization   
-    Thymio = Thymio_class(THYMIO_ID,cam) #Thymio initialization
+    Thymio = Thymio_class(THYMIO_ID, cam) #Thymio initialization
 
     path_planning = True #We want to have the path
     local_avoidance = False
@@ -66,7 +66,7 @@ async def main():
         if path_planning:
             if Thymio.target_keypoint is None or not np.any(Thymio.target_keypoint):
                 do_plot = True
-            grid = discretize_image_eff(cam.thresholded_image,GRID_L, GRID_W)
+            grid = discretize_image_eff(cam.thresholded_image, GRID_L, GRID_W)
             #Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
             found, path, _, _ = a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio.xytheta_est[1], Thymio.xytheta_est[0]]), cam.persp_image, grid), grid1_coord2grid2_coord(np.array([cam.goal_center[1], cam.goal_center[0]]), cam.persp_image,grid), do_plot)
             
@@ -113,14 +113,14 @@ async def main():
                 await set_motors(node, v_ml, v_mr)
             await set_motors(node, 50, 50)
             #time.sleep(0.2)
-            draw_on_image(cam, Thymio, kalman, path_img)
+            draw_on_image(cam, Thymio, path_img)
             continue
         else:
             if local_avoidance:
                 print("recalculating path")
                 path_planning = True
                 local_avoidance = False
-                draw_on_image(cam, Thymio, kalman, path_img)
+                draw_on_image(cam, Thymio, path_img)
                 continue
             else:
                 if((step % 5) == 0):
@@ -137,11 +137,11 @@ async def main():
                     v_ml, v_mr = motion_control(Thymio)
                     await set_motors(node, v_ml, v_mr)
                 
-                draw_on_image(cam, Thymio, kalman, path_img)
+                draw_on_image(cam, Thymio, path_img)
         if(await check_stop_button(node, client)):
             aw(node.stop())
             aw(node.unlock())
-            draw_history(cam, Thymio,path_img, keypoints)
+            draw_history(cam, Thymio, path_img, keypoints)
             break
     cam.cam.release()
     #cv2.destroyAllWindows()

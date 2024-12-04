@@ -15,9 +15,9 @@ async def set_motors(node, v_ml, v_mr): #v_l and v_r in PWM
 
 
 def limit_speed(v):
-    if(v>SPEED_LIMIT) :
-        v=SPEED_LIMIT
-    if(v<-SPEED_LIMIT) :
-        v=-SPEED_LIMIT
+    if(v > SPEED_LIMIT) :
+        v = SPEED_LIMIT
+    if(v < -SPEED_LIMIT) :
+        v = -SPEED_LIMIT
     return v
         

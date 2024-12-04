@@ -20,8 +20,8 @@ def avoid_obstacle(prox_values): #left to right
     braitenberg = [-10/300, -20/300, 30/300, 21/300, 11/300] #left to right
     v_mr, v_ml = SPEED, SPEED
     for i in range (len(prox_values)) :
-        v_ml -= braitenberg[i]*prox_values[i]
-        v_mr += braitenberg[i]*prox_values[i]
+        v_ml -= braitenberg[i] * prox_values[i]
+        v_mr += braitenberg[i] * prox_values[i]
     return v_ml, v_mr
 
     
