@@ -4,7 +4,7 @@ import time
 
 from constants import *
 
-KIDNAPPING_THRESHOLD = 0 #TO DO : DETERMINE THIS THRESHOLD
+KIDNAPPING_THRESHOLD = 800 #TO DO : DETERMINE THIS THRESHOLD
                             #acc : -32 to 32
                             #prox.ground.sensor : 0 to 1000 ??
        

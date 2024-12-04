@@ -48,19 +48,24 @@ async def main():
     path_planning = True
     local_avoidance = False
     step = 0
+    kidnapped = False
     
     while True :    
         step = step + 1
 
         #Check kidnapping
-        if(check_kidnapping(node)):
+        if(await check_kidnapping(node)):
+            if(kidnapped == False):
+                print("Thymio was kidnapped !")
             kidnapped = True
             await set_motors(node, 0, 0)
             continue
         if(kidnapped):
             kidnapped = False
             path_planning = True
+            do_plot = True
             time.sleep(2)
+            print("Thymio back on the ground")
         
         #Update Image
         cam.get_image()
@@ -108,7 +113,7 @@ async def main():
         
         #Obstacle detection
         prox_values = await get_prox(node, client)
-        if (await check_obstacle(prox_values), node):
+        if (await check_obstacle(prox_values)):
             print("obstacle")
             local_avoidance = True
             while (await check_obstacle(prox_values)):
@@ -156,4 +161,4 @@ async def main():
 
 # Run the main asynchronous function
 while True:
-    client.run_async_program(main)    
+    client.run_async_program(main)   

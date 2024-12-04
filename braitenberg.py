@@ -8,7 +8,7 @@ async def get_prox(node, client):
     await client.sleep(0.05)
     return (list(node.v.prox.horizontal)[:-2])
 
-async def check_obstacle(prox_values, node):
+async def check_obstacle(prox_values):
     #await node.wait_for_variables({"acc"})
     #if(abs(node.v.acc[2])<KIDNAPPING_THRESHOLD): #doesn't care about obstacles if being kidnapped
     if max(prox_values) > OBSTACLE_THRESHOLD :
