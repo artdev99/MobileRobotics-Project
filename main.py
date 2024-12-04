@@ -5,7 +5,6 @@ from camera_class import *
 from thymio_class import *
 from path import *
 from braitenberg import *
-from kalman import *
 from motion_control import *
 from motors import *
 from buttons import*
@@ -81,13 +80,13 @@ async def main():
             path_planning = False
  
         Thymio.Thymio_position_aruco(cam.persp_image)
-        kalman.delta_time_update()      
+        Thymio.delta_time_update()      
 
         #Kalman Filter
-        v_L, v_R = await kalman.gather_data(node)
-        Thymio.xytheta_est = kalman.predict_state(Thymio.xytheta_est,v_L,v_R)
-        if Thymio.Thymio_detected: #only update if Thymio detected
-            Thymio.xytheta_est, Thymio.xytheta_meas = kalman.update_state(Thymio.xytheta_est, Thymio.xytheta_meas)
+        v_L, v_R = await gather_data(node)
+        Thymio.kalman_predict_state(v_L, v_R)  # Predict
+        if Thymio.Thymio_detected:  # only update if Thymio detected
+            Thymio.kalman_update_state()
 
         #Update history for final plot
         if((step % 3) == 0):
