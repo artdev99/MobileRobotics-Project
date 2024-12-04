@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import time
 
 from constants import *
 
@@ -16,8 +15,6 @@ class Thymio_class:
         self.Thymio_position_aruco(cam.persp_image)
         self.pixbymm=cam.pixbymm
         self.xytheta_est = self.xytheta_meas
-        self.start_time=time.time()
-        self.delta_t=0
         self.keypoints=None
         self.target_keypoint=None
         self.xytheta_meas_hist=np.empty((0,3))
@@ -55,10 +52,6 @@ class Thymio_class:
 
             self.xytheta_meas = np.array([Thymio_x,Thymio_y,angle])
             self.Thymio_detected=True
-
-    def delta_time_update(self):
-        self.delta_t=(time.time()-self.start_time)
-        self.start_time=time.time()
         
 #Motion control
     def adjust_units(self):

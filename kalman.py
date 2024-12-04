@@ -1,4 +1,6 @@
 import numpy as np
+import time
+
 from constants import *
 
 class Kalman_class:
@@ -9,7 +11,13 @@ class Kalman_class:
         self.kalman_H = np.eye(3) 
         self.kalman_P = 10*self.kalman_R
         self.pixbymm = cam.pixbymm
+        self.start_time=time.time()
+        self.delta_t=0
         #self.v_var=151 # (v_var=var_L+var_R)
+
+    def delta_time_update(self):
+        self.delta_t=(time.time()-self.start_time)
+        self.start_time=time.time()
 
     async def gather_data(self, node):
         v_L = []
@@ -20,7 +28,7 @@ class Kalman_class:
             v_R.append(node.v.motor.right.speed)
         v_L = np.mean(v_L)
         v_R = np.mean(v_R)
-        
+
         return v_L, v_R
 
     def predict_state(self,thymio_xytheta_est,v_L,v_R):

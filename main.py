@@ -85,7 +85,7 @@ async def main():
             path_planning = False
  
         Thymio.Thymio_position_aruco(cam.persp_image)
-        Thymio.delta_time_update()      
+        kalman.delta_time_update()      
 
         #Kalman Filter
         v_L, v_R = await kalman.gather_data(node)
