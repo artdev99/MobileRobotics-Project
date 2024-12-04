@@ -85,9 +85,9 @@ async def main():
 
         #Kalman Filter
         v_L, v_R = await kalman.gather_data(node)
-        kalman.predict_state(Thymio.xytheta_est,v_L,v_R)
+        Thymio.xytheta_est = kalman.predict_state(Thymio.xytheta_est,v_L,v_R)
         if Thymio.Thymio_detected: #only update if Thymio detected
-            kalman.update_state(Thymio.xytheta_est, Thymio.xytheta_meas)
+            Thymio.xytheta_est, Thymio.xytheta_meas = kalman.update_state(Thymio.xytheta_est, Thymio.xytheta_meas)
 
         #Update history for final plot
         if((step % 3) == 0):
@@ -127,7 +127,6 @@ async def main():
                         Thymio.keypoints = Thymio.keypoints[1:]
                         Thymio.target_keypoint = Thymio.keypoints[0]
                     v_ml, v_mr = motion_control(Thymio)
-                    print("motion control : ", v_ml, v_mr)
                     await set_motors(node, v_ml, v_mr)
                 
                 draw_on_image(cam, Thymio, kalman, path_img)
@@ -141,5 +140,4 @@ async def main():
 
 # Run the main asynchronous function
 while True:
-    client.run_async_program(main)
-    
+    client.run_async_program(main)    

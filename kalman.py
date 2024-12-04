@@ -69,6 +69,8 @@ class Kalman_class:
         self.P = G @ self.P @ G.T + Q
         thymio_xytheta_est[:2]=thymio_xytheta_est[:2]*self.pixbymm #go in pix
 
+        return thymio_xytheta_est
+
     def update_state(self, thymio_xytheta_est, thymio_xytheta_meas):
 
         thymio_xytheta_est[:2] = thymio_xytheta_est[:2]/self.pixbymm #go in mm
@@ -97,6 +99,8 @@ class Kalman_class:
         
         thymio_xytheta_est[:2] = thymio_xytheta_est[:2]*self.pixbymm #go in pix
         thymio_xytheta_meas[:2] = thymio_xytheta_meas[:2]*self.pixbymm #go in pix
+        
+        return thymio_xytheta_est, thymio_xytheta_meas
 
 
 def compute_G_Q(theta,v_L,v_R,wheel_base,dt,process_cov):

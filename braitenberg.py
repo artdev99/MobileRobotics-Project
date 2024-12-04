@@ -15,11 +15,9 @@ def check_obstacle(prox_values):
 def avoid_obstacle(prox_values): #left to right
     braitenberg = [-10/300, -20/300, 30/300, 21/300, 11/300] #left to right
     v_mr, v_ml = SPEED, SPEED
-    print("prox : ", prox_values)
     for i in range (len(prox_values)) :
         v_ml -= braitenberg[i]*prox_values[i]
         v_mr += braitenberg[i]*prox_values[i]
-    print("braitenberg final speed : ", v_ml, v_mr)
     return v_ml, v_mr
 
     
