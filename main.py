@@ -5,6 +5,7 @@ from camera_class import *
 from thymio_class import *
 from path import *
 from braitenberg import *
+from kalman import *
 from motors import *
 from buttons import*
 
@@ -40,10 +41,13 @@ async def main():
     print("Starting the program")
 
     #Camera initialization
-    cam = camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL)
+    cam = Camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL)
 
     #Thymio initialization
     Thymio = Thymio_class(THYMIO_ID,cam)
+
+    #Kalman initialization
+    kalman = Kalman_class(cam)
 
     path_planning = True #We want to have the path
     local_avoidance = False
@@ -84,17 +88,10 @@ async def main():
         Thymio.delta_time_update()      
 
         #Kalman Filter
-        v_L = []
-        v_R = []
-        for _ in range(10): #remove some variance
-            await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
-            v_L.append(node.v.motor.left.speed)
-            v_R.append(node.v.motor.right.speed)
-        v_L = np.mean(v_L)
-        v_R = np.mean(v_R)
-        Thymio.kalman_predict_state(v_L,v_R) #Predict
+        v_L, v_R = await kalman.gather_data(node)
+        kalman.predict_state(Thymio.xytheta_est,v_L,v_R)
         if Thymio.Thymio_detected: #only update if Thymio detected
-            Thymio.kalman_update_state()
+            kalman.update_state(Thymio.xytheta_est, Thymio.xytheta_meas)
 
         #Update history for final plot
         if((step % 3) == 0):

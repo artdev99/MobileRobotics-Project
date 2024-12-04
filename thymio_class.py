@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import time
 
-L_AXIS = 92                    #wheel axis length [mm]
-SPEED_SCALING_FACTOR = 500/200 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
+from constants import *
+
 SPEED = 50                     #[mm/s] 
         
 ########################
@@ -22,12 +22,6 @@ class Thymio_class:
         self.target_keypoint=None
         self.xytheta_meas_hist=np.empty((0,3))
         self.xytheta_est_hist=np.empty((0,3))
-        #Kalman
-        self.kalman_Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
-        self.kalman_R = np.diag([5, 5, np.deg2rad(5)])** 2  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
-        self.kalman_H=np.eye(3) 
-        self.kalman_P=10*self.kalman_R
-        #self.v_var=151 # (v_var=var_L+var_R)
 
     def Thymio_position_aruco(self,img):
 
@@ -66,75 +60,6 @@ class Thymio_class:
         self.delta_t=(time.time()-self.start_time)
         self.start_time=time.time()
         
-#Kalman
-    def kalman_predict_state(self,v_L,v_R):
-        """
-        Predict the next state
-        """
-        self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-        #print(f"Before scaling v_L {v_L} v_R {v_R}")
-        
-        v_L=v_L/SPEED_SCALING_FACTOR #go from pwm to mm/s
-        v_R=v_R/SPEED_SCALING_FACTOR
-        #print(f"AFTER scaling v_L {v_L} v_R {v_R}")
-        theta =self.xytheta_est[2]
-        
-        # Compute linear and angular velocities
-        v = (v_R + v_L) / 2
-        omega = (v_L - v_R) /L_AXIS
-        #print(f"73{v}")
-
-        # Update state
-        delta_theta = omega * self.delta_t
-        theta_mid = theta + delta_theta / 2 #midpoint method (the robot is turning so we take avg angle)
-        delta_x = v * np.cos(theta_mid) * self.delta_t
-        delta_y = v * np.sin(theta_mid) * self.delta_t
-        self.xytheta_est = self.xytheta_est + np.array([delta_x,delta_y,delta_theta])
-        
-        # Normalize angle to [-pi, pi]
-        self.xytheta_est[2] = normalize_angle(self.xytheta_est[2])
-
-        """
-        Predict the next covariance matrix
-        """
-        # Compute Jacobian and covariance matrix
-        G,Q = compute_G_Q(self.xytheta_est[2],v_L,v_R,L_AXIS,self.delta_t,self.kalman_Q)
-
-
-        # Predict covariance
-        self.kalman_P = G @ self.kalman_P @ G.T + Q
-        self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
-
-
-    def kalman_update_state(self):
-
-        self.xytheta_est[:2]=self.xytheta_est[:2]/self.pixbymm #go in mm
-        self.xytheta_meas[:2]=self.xytheta_meas[:2]/self.pixbymm #go in mm
-        # Innovation
-        
-        y = self.xytheta_meas - self.kalman_H @ self.xytheta_est
-
-        # Normalize angle difference to [-pi, pi]
-        y[2] = (y[2] + np.pi) % (2 * np.pi) - np.pi
-
-        # Innovation covariance
-        S = self.kalman_H @ self.kalman_P @ self.kalman_H.T + self.kalman_R
-
-        # Kalman gain
-        K = self.kalman_P @ self.kalman_H.T @ np.linalg.inv(S)
-
-        # Update state estimate
-        self.xytheta_est = self.xytheta_est + K @ y
-        # Normalize angle to [-pi, pi]
-        self.xytheta_est[2] = normalize_angle(self.xytheta_est[2])
-
-        # Update covariance estimate
-        self.kalman_P = (np.eye(3) - K @ self.kalman_H) @ self.kalman_P
-        
-        
-        self.xytheta_est[:2]=self.xytheta_est[:2]*self.pixbymm #go in pix
-        self.xytheta_meas[:2]=self.xytheta_meas[:2]*self.pixbymm #go in pix
-
 #Motion control
     def adjust_units(self):
         x_mm = ((self.xytheta_est.flatten())[0])/self.pixbymm
@@ -171,31 +96,3 @@ class Thymio_class:
         v_mr = (v-omega*L_AXIS)*SPEED_SCALING_FACTOR #PWM
 
         return v_ml, v_mr
-
-def normalize_angle(angle): #restricts angle [rad] between -pi and pi
-    while angle > np.pi:
-        angle -= 2 * np.pi
-    while angle < -np.pi:
-        angle += 2 * np.pi
-    return angle
-
-def compute_G_Q(theta,v_L,v_R,wheel_base,dt,process_cov):
-    """
-    Compute the Jacobian G and covariance matrix Q
-    """
-    # Linear and angular velocities
-    v = (v_R + v_L) / 2
-    omega = (v_R - v_L) / wheel_base
-    theta_mid = theta + omega * dt / 2 #midpoint method (the robot is turning)
-
-    # Compute Jacobian
-    G = np.array([
-        [1, 0, -v * np.sin(theta_mid) * dt],
-        [0, 1,  v * np.cos(theta_mid) * dt],
-        [0, 0, 1]
-    ])
-    #Process cov
-    Q=process_cov* dt
-
-    return G,Q
-

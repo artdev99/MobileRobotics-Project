@@ -5,7 +5,7 @@ from skimage import measure
 ########################
 #Camera
 ########################
-class camera_class:
+class Camera_class:
     def __init__(self,camera_index=1,corner_aruco_id=[0, 1, 2, 10],corner_aruco_size=70,min_size=5000, thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0])):
 
         self.cam = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
