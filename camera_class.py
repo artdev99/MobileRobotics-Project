@@ -6,7 +6,7 @@ from skimage import measure
 #Camera
 ########################
 class Camera_class:
-    def __init__(self,camera_index=1,corner_aruco_id=[0, 1, 2, 10],corner_aruco_size=70,min_size=5000, thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0])):
+    def __init__(self,camera_index=1,corner_aruco_id=[0, 1, 2, 10], corner_aruco_size=70, min_size=5000, thresh_obstacle=np.array([0,0,120,0,0,140]), thresh_goal=np.array([0,120,0,0,140,0])):
 
         self.cam = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
         if not self.cam.isOpened():
@@ -28,11 +28,9 @@ class Camera_class:
         self.correct_perspective_aruco(get_matrix=True)
         self.pixbymm=self.size_aruco/corner_aruco_size
         #We get the image with expanded obstacles and all the contours
-        self.thresholded_image,self.obstacle_cnt, self.obstacle_cnt_expnded, self.goal_cnt,self.goal_center= full_detection_cnt_centroid(self.persp_image, thresh_obstacle, thresh_goal, min_size, self.size_aruco, corner_aruco_size)
+        self.thresholded_image, self.obstacle_cnt, self.obstacle_cnt_expnded, self.goal_cnt, self.goal_center = full_detection_cnt_centroid(self.persp_image, thresh_obstacle, thresh_goal, min_size, self.size_aruco, corner_aruco_size)
         
-
-
-    def get_image(self,distortion=False, alpha=1):
+    def get_image(self, distortion=False, alpha=1):
         ret, self.image = self.cam.read()
         if not ret:
             self.cam.release()
@@ -41,14 +39,9 @@ class Camera_class:
         #if distortion:
         #    self.image = self.correct_camera_distortion(self.image, alpha)
 
-    
-
-
-    def correct_perspective_aruco(self,get_matrix=False) -> np.ndarray:
+    def correct_perspective_aruco(self, get_matrix=False) -> np.ndarray:
         if get_matrix:
-            
-            corners, self.size_aruco= find_aruco_corners_size(self.image)
-
+            corners, self.size_aruco = find_aruco_corners_size(self.image)
             ordered_corners = order_points(corners)
             self.max_width_perspective, self.max_height_perspective = compute_destination_size(ordered_corners)
             destination_corners = np.array([
@@ -58,16 +51,16 @@ class Camera_class:
                 [0, self.max_height_perspective - 1]], dtype="float32")
             self.M = cv2.getPerspectiveTransform(ordered_corners, destination_corners)
 
-        self.persp_image = cv2.warpPerspective(self.image,self.M, (self.max_width_perspective, self.max_height_perspective), flags=cv2.INTER_LINEAR)
+        self.persp_image = cv2.warpPerspective(self.image, self.M, (self.max_width_perspective, self.max_height_perspective), flags = cv2.INTER_LINEAR)
         
 
 ###Functions
-def full_detection_cnt_centroid(image: np.ndarray, thresh_obstacle, thresh_goal,min_size, corner_aruco_size_mm,corner_aruco_size_pix) -> np.ndarray:
+def full_detection_cnt_centroid(image: np.ndarray, thresh_obstacle, thresh_goal, min_size, corner_aruco_size_mm, corner_aruco_size_pix) -> np.ndarray:
     thresholded_img = np.zeros_like(image)
-    Thymio_radius_mm=70 #mm
-    radius=0.38*Thymio_radius_mm*corner_aruco_size_pix/corner_aruco_size_mm
+    Thymio_radius_mm = 70 #mm
+    radius = 0.38*Thymio_radius_mm*corner_aruco_size_pix/corner_aruco_size_mm
     # Find Obstacles
-    obstacle_mask=255*np.ones(image.shape[:2], dtype=np.uint8)
+    obstacle_mask = 255*np.ones(image.shape[:2], dtype=np.uint8)
     for i in range(thresh_obstacle.shape[0]):
         temp_mask = cv2.inRange(image, thresh_obstacle[i,:3], thresh_obstacle[i,3:6])
         obstacle_mask = cv2.bitwise_and(obstacle_mask, temp_mask)
@@ -88,16 +81,16 @@ def full_detection_cnt_centroid(image: np.ndarray, thresh_obstacle, thresh_goal,
 
     contours, _ = cv2.findContours(goal_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     goal_cnt = max(contours, key=cv2.contourArea)
-    goal_mask =np.zeros_like(goal_mask)
+    goal_mask = np.zeros_like(goal_mask)
     cv2.drawContours(goal_mask, goal_cnt, -1, 255, thickness=cv2.FILLED)
     thresholded_img[goal_mask==255] = [0, 255, 0]
     #Goal Center:
     M = cv2.moments((goal_mask*255).astype(np.uint8))
     Goal_x = int(M["m10"] / M["m00"])
     Goal_y = int(M["m01"] / M["m00"])
-    Goal_center=np.array([Goal_x,Goal_y]).reshape(2,1)
+    Goal_center = np.array([Goal_x,Goal_y]).reshape(2,1)
 
-    return thresholded_img,obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center
+    return thresholded_img, obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center
 
 
 def fill_holes(bool_mask: np.ndarray)-> np.ndarray:
@@ -105,7 +98,7 @@ def fill_holes(bool_mask: np.ndarray)-> np.ndarray:
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     filled_mask = np.zeros_like(mask)
     cv2.drawContours(filled_mask, contours, -1, 255, thickness=cv2.FILLED)
-    return filled_mask,contours
+    return filled_mask, contours
 
 
 def filter_small_blobs(red_mask: np.ndarray, min_size: int) -> np.ndarray:
@@ -156,13 +149,13 @@ def find_aruco_corners_size(image):
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
     
     # Detect the markers
-    gray_img=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     if cv2.__version__ == "4.10.0":
         _aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
         corners, ids, _ = _aruco_detector.detectMarkers(gray_img)
     else:
         corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
-    if len(ids)<4:
+    if len(ids) < 4:
         raise ValueError("Not enough corners detected for perspective")
     inner_corners = []
 
@@ -190,7 +183,7 @@ def find_aruco_corners_size(image):
 
 
 def draw_on_image(camera,Thymio,kalman,path_img):
-    image_cnt=camera.persp_image.copy()
+    image_cnt = camera.persp_image.copy()
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0,255,0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt_expnded, -1, (0,100,255), 3)
@@ -200,13 +193,11 @@ def draw_on_image(camera,Thymio,kalman,path_img):
         cv2.circle(image_cnt, Thymio.keypoints[i], 10, (200, 240, 190), -1)
     cv2.circle(image_cnt, Thymio.target_keypoint, 10, (0, 255, 255), -1)
 
-    radius=1.5*camera.size_aruco
+    radius = 1.5*camera.size_aruco
     if Thymio.Thymio_detected:
-        Thymio_nose=radius*np.array([np.cos(Thymio.xytheta_meas[2]),np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
-        Thymio_nose=Thymio_nose+Thymio.xytheta_meas[:2]
-        cv2.arrowedLine(image_cnt, Thymio.xytheta_meas[:2].astype(int),Thymio_nose.astype(int) , (255, 0, 255), 2, tipLength=0.2)
-    
-
+        Thymio_nose = radius*np.array([np.cos(Thymio.xytheta_meas[2]), np.sin(Thymio.xytheta_meas[2])]) #thymio is approx 1.5 aruco size
+        Thymio_nose = Thymio_nose + Thymio.xytheta_meas[:2]
+        cv2.arrowedLine(image_cnt, Thymio.xytheta_meas[:2].astype(int), Thymio_nose.astype(int), (255, 0, 255), 2, tipLength=0.2)
     
     #Kalman:
     #2sigma-confidence Position (95%)
@@ -219,12 +210,11 @@ def draw_on_image(camera,Thymio,kalman,path_img):
 
     cv2.ellipse(image_cnt, Thymio.xytheta_est[:2].astype(int), (radius.astype(int), radius.astype(int)), 0, start_angle, end_angle, (255, 0, 127), 2)
     
-
     cv2.imshow('Camera View', image_cnt)
     cv2.waitKey(1)
 
 def draw_history(camera,Thymio,path_img, keypoints):
-    image_cnt=camera.persp_image.copy()
+    image_cnt = camera.persp_image.copy()
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0,255,0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt_expnded, -1, (0,100,255), 3)
