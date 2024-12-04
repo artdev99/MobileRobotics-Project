@@ -59,7 +59,7 @@ class Thymio_class:
         if (ids is None) or (self.Thymio_ID not in ids):
             self.Thymio_detected = False
         else:
-            idx = np.where(ids == self.Thymio_ID)[0][0]  # Thymio's aruco ID is 10
+            idx = np.where(ids == self.Thymio_ID)[0][0]  # Thymio's aruco ID is 9
             aruco_corners = np.array(corners[idx][0, :, :])
 
             # Thymio's center:
