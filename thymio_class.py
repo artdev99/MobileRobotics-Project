@@ -3,6 +3,10 @@ import numpy as np
 import time
 
 from constants import *
+
+KIDNAPPING_THRESHOLD = 0 #TO DO : DETERMINE THIS THRESHOLD
+                            #acc : -32 to 32
+                            #prox.ground.sensor : 0 to 1000 ??
        
 ########################
 #Thymio class
@@ -23,7 +27,6 @@ class Thymio_class:
         self.xytheta_meas_hist = np.empty((0, 3))
         self.xytheta_est_hist = np.empty((0, 3))
         # Kalman
-        self.kalman_wheel_base = 92  # mm
         self.kalman_Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
         self.kalman_R = (
             np.diag([5, 5, np.deg2rad(5)]) ** 2
@@ -100,7 +103,7 @@ class Thymio_class:
 
         # Compute linear and angular velocities
         v = (v_R + v_L) / 2
-        omega = (v_L - v_R) / self.kalman_wheel_base
+        omega = (v_L - v_R) / L_AXIS
         # print(f"73{v}")
 
         # Update state
@@ -123,7 +126,7 @@ class Thymio_class:
             self.xytheta_est[2],
             v_L,
             v_R,
-            self.kalman_wheel_base,
+            L_AXIS,
             self.delta_t,
             self.kalman_Q,
         )
@@ -195,8 +198,14 @@ async def gather_data(node):
     return v_L, v_R
 
 async def check_kidnapping(node):
-    await node.wait_for_variables({"acc"})
-    if(abs(node.v.acc[2])<KIDNAPPING_THRESHOLD):
+    # await node.wait_for_variables({"acc"})
+    # if(abs(node.v.acc[2])<KIDNAPPING_THRESHOLD):
+    #     return True
+    # else:
+    #     return False
+    
+    await node.wait_for_variables({"prox.ground.delta"})
+    if(min(node.v.prox.ground.delta)<KIDNAPPING_THRESHOLD):
         return True
     else:
         return False
