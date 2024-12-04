@@ -189,7 +189,7 @@ def find_aruco_corners_size(image):
 
 
 
-def draw_on_image(camera,Thymio,path_img):
+def draw_on_image(camera,Thymio,kalman,path_img):
     image_cnt=camera.persp_image.copy()
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0,255,0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (0,0,255), 3)
@@ -211,11 +211,11 @@ def draw_on_image(camera,Thymio,path_img):
     #Kalman:
     #2sigma-confidence Position (95%)
 
-    cv2.circle(image_cnt, Thymio.xytheta_est[:2].astype(int), (2*np.sqrt(Thymio.kalman_P[2,2])*Thymio.pixbymm).astype(int), (0, 255, 255), 2)
+    cv2.circle(image_cnt, Thymio.xytheta_est[:2].astype(int), (2*np.sqrt(kalman.P[2,2])*Thymio.pixbymm).astype(int), (0, 255, 255), 2)
     #Angle:
     # sigma-confidence arc (95%)
-    start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(2*np.sqrt(Thymio.kalman_P[2,2]))  # Start of the arc
-    end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(2*np.sqrt(Thymio.kalman_P[2,2]))    # End of the arc
+    start_angle = np.degrees(Thymio.xytheta_est[2]) - np.degrees(2*np.sqrt(kalman.P[2,2]))  # Start of the arc
+    end_angle = np.degrees(Thymio.xytheta_est[2]) + np.degrees(2*np.sqrt(kalman.P[2,2]))    # End of the arc
 
     cv2.ellipse(image_cnt, Thymio.xytheta_est[:2].astype(int), (radius.astype(int), radius.astype(int)), 0, start_angle, end_angle, (255, 0, 127), 2)
     

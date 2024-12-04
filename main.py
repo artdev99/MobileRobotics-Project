@@ -41,14 +41,9 @@ async def main():
     cv2.destroyAllWindows()
     print("Starting the program")
 
-    #Camera initialization
-    cam = Camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL)
-
-    #Thymio initialization
-    Thymio = Thymio_class(THYMIO_ID,cam)
-
-    #Kalman initialization
-    kalman = Kalman_class(cam)
+    cam = Camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL) #Camera initialization   
+    Thymio = Thymio_class(THYMIO_ID,cam) #Thymio initialization
+    kalman = Kalman_class(cam) #Kalman initialization
 
     path_planning = True #We want to have the path
     local_avoidance = False
@@ -106,17 +101,18 @@ async def main():
             local_avoidance = True
             while (check_obstacle(prox_values)):
                 prox_values = await get_prox(node, client)
-                await set_motors(node, avoid_obstacle(prox_values))
+                v_ml, v_mr = avoid_obstacle(prox_values)
+                await set_motors(node, v_ml, v_mr)
             await set_motors(node, 50, 50)
             #time.sleep(0.2)
-            draw_on_image(cam, Thymio, path_img)
+            draw_on_image(cam, Thymio, kalman, path_img)
             continue
         else:
             if local_avoidance:
                 print("recalculating path")
                 path_planning = True
                 local_avoidance = False
-                draw_on_image(cam, Thymio, path_img)
+                draw_on_image(cam, Thymio, kalman, path_img)
                 continue
             else:
                 if((step % 5) == 0):
@@ -130,9 +126,11 @@ async def main():
                             break
                         Thymio.keypoints = Thymio.keypoints[1:]
                         Thymio.target_keypoint = Thymio.keypoints[0]
-                    await set_motors(node, motion_control(Thymio))
+                    v_ml, v_mr = motion_control(Thymio)
+                    print("motion control : ", v_ml, v_mr)
+                    await set_motors(node, v_ml, v_mr)
                 
-                draw_on_image(cam, Thymio, path_img)
+                draw_on_image(cam, Thymio, kalman, path_img)
         if(await check_stop_button(node, client)):
             aw(node.stop())
             aw(node.unlock())

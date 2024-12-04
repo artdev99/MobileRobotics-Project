@@ -1,3 +1,5 @@
+import numpy as np
+
 L_AXIS = 92                    #wheel axis length [mm]
 SPEED_SCALING_FACTOR = 500/200 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
 

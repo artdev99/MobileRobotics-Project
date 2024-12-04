@@ -6,10 +6,10 @@ from constants import *
 class Kalman_class:
 
     def __init__(self, cam):
-        self.kalman_Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
-        self.kalman_R = np.diag([5, 5, np.deg2rad(5)])** 2  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
-        self.kalman_H = np.eye(3) 
-        self.kalman_P = 10*self.kalman_R
+        self.Q = np.diag([15, 15, np.deg2rad(20)]) ** 2
+        self.R = np.diag([5, 5, np.deg2rad(5)])** 2  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.H = np.eye(3) 
+        self.P = 10*self.R
         self.pixbymm = cam.pixbymm
         self.start_time=time.time()
         self.delta_t=0
@@ -56,17 +56,17 @@ class Kalman_class:
         thymio_xytheta_est = thymio_xytheta_est + np.array([delta_x,delta_y,delta_theta])
         
         # Normalize angle to [-pi, pi]
-        thymio_xytheta_est[2] = normalize_angle(self.xytheta_est[2])
+        thymio_xytheta_est[2] = normalize_angle(thymio_xytheta_est[2])
 
         """
         Predict the next covariance matrix
         """
         # Compute Jacobian and covariance matrix
-        G,Q = compute_G_Q(self.xytheta_est[2],v_L,v_R,L_AXIS,self.delta_t,self.kalman_Q)
+        G,Q = compute_G_Q(thymio_xytheta_est[2],v_L,v_R,L_AXIS,self.delta_t,self.Q)
 
 
         # Predict covariance
-        self.kalman_P = G @ self.kalman_P @ G.T + Q
+        self.P = G @ self.P @ G.T + Q
         thymio_xytheta_est[:2]=thymio_xytheta_est[:2]*self.pixbymm #go in pix
 
     def update_state(self, thymio_xytheta_est, thymio_xytheta_meas):
@@ -75,16 +75,16 @@ class Kalman_class:
         thymio_xytheta_meas = thymio_xytheta_meas/self.pixbymm #go in mm
         # Innovation
         
-        y = thymio_xytheta_meas - self.kalman_H @ thymio_xytheta_est
+        y = thymio_xytheta_meas - self.H @ thymio_xytheta_est
 
         # Normalize angle difference to [-pi, pi]
         y[2] = (y[2] + np.pi) % (2 * np.pi) - np.pi
 
         # Innovation covariance
-        S = self.kalman_H @ self.kalman_P @ self.kalman_H.T + self.kalman_R
+        S = self.H @ self.P @ self.H.T + self.R
 
         # Kalman gain
-        K = self.kalman_P @ self.kalman_H.T @ np.linalg.inv(S)
+        K = self.P @ self.H.T @ np.linalg.inv(S)
 
         # Update state estimate
         thymio_xytheta_est = thymio_xytheta_est + K @ y
@@ -92,7 +92,7 @@ class Kalman_class:
         thymio_xytheta_est[2] = normalize_angle(thymio_xytheta_est[2])
 
         # Update covariance estimate
-        self.kalman_P = (np.eye(3) - K @ self.kalman_H) @ self.kalman_P
+        self.P = (np.eye(3) - K @ self.H) @ self.P
         
         
         thymio_xytheta_est[:2] = thymio_xytheta_est[:2]*self.pixbymm #go in pix

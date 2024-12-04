@@ -1,6 +1,6 @@
 SPEED_LIMIT = 500 #PWM
 
-async def set_motors(node, v_l, v_r): #v_l and v_r in PWM
+async def set_motors(node, v_ml, v_mr): #v_l and v_r in PWM
     v_ml = limit_speed(v_ml)
     v_mr = limit_speed(v_mr)
 
