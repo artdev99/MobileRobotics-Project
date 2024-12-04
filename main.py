@@ -1,8 +1,8 @@
 import numpy as np
 import cv2
 from tdmclient import ClientAsync, aw
-from camera_class import *
-from thymio_class import *
+from camera import *
+from thymio import *
 from path import *
 from motion_control import *
 from buttons import*

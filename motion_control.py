@@ -1,6 +1,6 @@
 import numpy as np
 
-from thymio_class import L_AXIS, SPEED_SCALING_FACTOR, normalize_angle
+from thymio import L_AXIS, SPEED_SCALING_FACTOR, normalize_angle
 
 OBSTACLE_THRESHOLD = 1000
 SPEED = 80 #[mm/s]

@@ -4,9 +4,7 @@ import time
 
 L_AXIS = 92                    #wheel axis length [mm]
 SPEED_SCALING_FACTOR = 526/200 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
-KIDNAPPING_THRESHOLD = 800 #TO DO : DETERMINE THIS THRESHOLD
-                            #acc : -32 to 32
-                            #prox.ground.sensor : 0 to 1000 ??
+KIDNAPPING_THRESHOLD = 800     #for prox.ground.delta
         
 ########################
 # Thymio class
