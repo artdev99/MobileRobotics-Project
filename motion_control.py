@@ -1,8 +1,10 @@
 import numpy as np
 
-from constants import *
+from thymio_class import L_AXIS, SPEED_SCALING_FACTOR, normalize_angle
 
-SPEED = 50 #[mm/s] 
+OBSTACLE_THRESHOLD = 1000
+SPEED = 70 #[mm/s]
+SPEED_LIMIT = 500 #PWM
 
 def motion_control(thymio):
 
@@ -24,3 +26,45 @@ def motion_control(thymio):
         v_mr = (v-omega*L_AXIS)*SPEED_SCALING_FACTOR #PWM
 
         return v_ml, v_mr
+
+async def get_prox(node, client):
+    await node.wait_for_variables({"prox.horizontal"})
+    await client.sleep(0.05)
+    return (list(node.v.prox.horizontal)[:-2])
+
+async def check_obstacle(prox_values):
+    #await node.wait_for_variables({"acc"})
+    #if(abs(node.v.acc[2])<KIDNAPPING_THRESHOLD): #doesn't care about obstacles if being kidnapped
+    if max(prox_values) > OBSTACLE_THRESHOLD :
+        return True
+    else :
+        return False        
+
+def avoid_obstacle(prox_values): #left to right
+    braitenberg = [-10/300, -20/300, 30/300, 21/300, 11/300] #left to right
+    v_mr, v_ml = SPEED, SPEED
+    for i in range (len(prox_values)) :
+        v_ml -= braitenberg[i] * prox_values[i]
+        v_mr += braitenberg[i] * prox_values[i]
+    return v_ml, v_mr
+
+async def set_motors(node, v_ml, v_mr): #v_l and v_r in PWM
+    v_ml = limit_speed(v_ml)
+    v_mr = limit_speed(v_mr)
+
+    v_ml = int(v_ml)  #ensure integer type
+    v_mr = int(v_mr)  #ensure integer type
+
+    v_m = {
+        "motor.left.target": [v_ml],
+        "motor.right.target": [v_mr],
+    }
+    await node.set_variables(v_m)
+
+def limit_speed(v):
+    if(v > SPEED_LIMIT) :
+        v = SPEED_LIMIT
+    if(v < -SPEED_LIMIT) :
+        v = -SPEED_LIMIT
+    return v
+        

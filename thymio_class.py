@@ -2,12 +2,12 @@ import cv2
 import numpy as np
 import time
 
-from constants import *
-
+L_AXIS = 92                    #wheel axis length [mm]
+SPEED_SCALING_FACTOR = 500/200 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
 KIDNAPPING_THRESHOLD = 800 #TO DO : DETERMINE THIS THRESHOLD
                             #acc : -32 to 32
                             #prox.ground.sensor : 0 to 1000 ??
-       
+        
 ########################
 #Thymio class
 ########################
@@ -209,3 +209,10 @@ async def check_kidnapping(node):
         return True
     else:
         return False
+    
+def normalize_angle(angle): #restricts angle [rad] between -pi and pi
+    while angle > np.pi:
+        angle -= 2 * np.pi
+    while angle < -np.pi:
+        angle += 2 * np.pi
+    return angle

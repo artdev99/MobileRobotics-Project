@@ -134,7 +134,7 @@ def find_keypoints(path):
     if len(path) < 3 :
         return path
 
-    keypoints = [] 
+    keypoints = [path[0]] 
     counter = 1
 
     for i in range(STEP, len(path)-STEP, STEP):

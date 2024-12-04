@@ -4,9 +4,7 @@ from tdmclient import ClientAsync, aw
 from camera_class import *
 from thymio_class import *
 from path import *
-from braitenberg import *
 from motion_control import *
-from motors import *
 from buttons import*
 from drawings import *
 
@@ -17,7 +15,7 @@ CAMERA_INDEX = 1 #0 if no webcam
 CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
 CORNER_ARUCO_SIZE = 65          #[mm]
 MIN_SIZE = 500 #minimum blob size
-COLOR_OBSTACLE = np.array([[30,20,120,65,50,170]]) #BGR
+COLOR_OBSTACLE = np.array([[30,20,120,65,100,255]]) #BGR
 COLOR_GOAL = np.array([30,40,20,80,150,65])        #BGR
 THYMIO_ID = 9
 GRID_L = 400 #[pixels]
@@ -52,25 +50,13 @@ async def main():
     
     while True :    
         step = step + 1
-
-        #Check kidnapping
-        if(await check_kidnapping(node)):
-            if(kidnapped == False):
-                print("Thymio was kidnapped !")
-            kidnapped = True
-            await set_motors(node, 0, 0)
-            continue
-        if(kidnapped):
-            kidnapped = False
-            path_planning = True
-            do_plot = True
-            time.sleep(2)
-            print("Thymio back on the ground")
         
         #Update Image
         cam.get_image()
         cam.correct_perspective_aruco(get_matrix = False)
-
+        
+        Thymio.Thymio_position_aruco(cam.persp_image)
+        
         #Path Planning
         if path_planning:
             if Thymio.target_keypoint is None or not np.any(Thymio.target_keypoint):
@@ -78,6 +64,7 @@ async def main():
             grid = discretize_image_eff(cam.thresholded_image, GRID_L, GRID_W)
             #Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
             found, path, _, _ = a_star_search(grid, grid1_coord2grid2_coord(np.array([Thymio.xytheta_est[1], Thymio.xytheta_est[0]]), cam.persp_image, grid), grid1_coord2grid2_coord(np.array([cam.goal_center[1], cam.goal_center[0]]), cam.persp_image,grid), do_plot)
+            print("found a new path") 
             
             if(not found):
                 print("couldn't find path, stopping the program")
@@ -91,13 +78,12 @@ async def main():
             path_img = path_img[::-1]
             
             keypoints = find_keypoints(path_img)
-            Thymio.target_keypoint = keypoints[0]
             Thymio.keypoints=keypoints[1:]
+            Thymio.target_keypoint = keypoints[0]
             
             do_plot = False
             path_planning = False
  
-        Thymio.Thymio_position_aruco(cam.persp_image)
         Thymio.delta_time_update()      
 
         #Kalman Filter
@@ -110,6 +96,21 @@ async def main():
         if((step % 3) == 0):
             Thymio.xytheta_meas_hist = np.vstack((Thymio.xytheta_meas_hist, Thymio.xytheta_meas))
             Thymio.xytheta_est_hist = np.vstack((Thymio.xytheta_est_hist, Thymio.xytheta_est))
+        
+        #Check kidnapping
+        if(await check_kidnapping(node)):
+            draw_on_image(cam, Thymio, path_img)
+            if(kidnapped == False):
+                print("Thymio was kidnapped !")
+            kidnapped = True
+            await set_motors(node, 0, 0)
+            continue
+        if(kidnapped):
+            kidnapped = False
+            path_planning = True
+            do_plot = True
+            time.sleep(2)
+            print("Thymio back on the ground")
         
         #Obstacle detection
         prox_values = await get_prox(node, client)
@@ -161,4 +162,4 @@ async def main():
 
 # Run the main asynchronous function
 while True:
-    client.run_async_program(main)   
+    client.run_async_program(main)    
