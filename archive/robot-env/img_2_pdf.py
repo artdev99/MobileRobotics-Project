@@ -1,11 +1,11 @@
 # https://www.geeksforgeeks.org/python-convert-image-to-pdf-using-img2pdf-module/
 # https://stackoverflow.com/questions/35859140/remove-transparency-alpha-from-any-image-using-pil
 import img2pdf
-from PIL import Image 
+from PIL import Image
 import os
 import glob
 
-name = "bottom-right" # MODIFY NAME
+name = "bottom-right"  # MODIFY NAME
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 file_matches = glob.glob(os.path.join(script_dir, f"{name}.*"))
@@ -18,7 +18,9 @@ pdf_path = os.path.join(script_dir, f"{name}.pdf")
 
 try:
     image = Image.open(img_path)
-    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+    if image.mode in ("RGBA", "LA") or (
+        image.mode == "P" and "transparency" in image.info
+    ):
         bg = Image.new("RGB", image.size, (255, 255, 255))
         bg.paste(image, mask=image.split()[-1])
         image.close()
@@ -39,6 +41,6 @@ try:
     file.close()
 
 except FileNotFoundError:
-        print(f"Error: The file '{img_path}' was not found.")
+    print(f"Error: The file '{img_path}' was not found.")
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
