@@ -193,3 +193,10 @@ async def gather_data(node):
     v_R = np.mean(v_R)
 
     return v_L, v_R
+
+async def check_kidnapping(node):
+    await node.wait_for_variables({"acc"})
+    if(abs(node.v.acc[2])<KIDNAPPING_THRESHOLD):
+        return True
+    else:
+        return False

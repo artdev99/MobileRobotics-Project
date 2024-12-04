@@ -42,7 +42,6 @@ async def main():
 
     cam = Camera_class(CAMERA_INDEX,CORNER_ARUCO_ID,CORNER_ARUCO_SIZE, MIN_SIZE, COLOR_OBSTACLE, COLOR_GOAL) #Camera initialization   
     Thymio = Thymio_class(THYMIO_ID,cam) #Thymio initialization
-    kalman = Kalman_class(cam) #Kalman initialization
 
     path_planning = True #We want to have the path
     local_avoidance = False
@@ -50,6 +49,15 @@ async def main():
     
     while True :    
         step = step + 1
+
+        if(check_kidnapping(node)):
+            kidnapped = True
+            await set_motors(node, 0, 0)
+            continue
+        if(kidnapped):
+            kidnapped = False
+            path_planning = True
+        
         #Update Image
         cam.get_image()
         cam.correct_perspective_aruco(get_matrix = False)
