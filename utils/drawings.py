@@ -7,7 +7,7 @@ def draw_on_image(camera, Thymio, path_img):
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (122, 43, 46), 3) 
     cv2.drawContours(image_cnt, camera.obstacle_cnt_expnded, -1, (196, 176, 68), 3)
     
-    if path_img: 
+    if path_img is not None: 
         cv2.polylines(
             image_cnt,
             [path_img.T.reshape(-1, 1, 2)],
@@ -81,7 +81,7 @@ def draw_on_image(camera, Thymio, path_img):
     cv2.waitKey(1)
 
 
-def draw_history(camera, Thymio, path_img, keypoints,meas_kidnap_index,est_kidnap_index):
+def draw_history(camera, Thymio, path_img, keypoints):
     image_cnt = camera.persp_image.copy()
     cv2.drawContours(image_cnt, camera.goal_cnt, -1, (0, 255, 0), 3)
     cv2.drawContours(image_cnt, camera.obstacle_cnt, -1, (122, 43, 46), 3) 
@@ -91,7 +91,7 @@ def draw_history(camera, Thymio, path_img, keypoints,meas_kidnap_index,est_kidna
             image_cnt,
             [path_img[i].T.reshape(-1, 1, 2)],
             isClosed=False,
-            color=(0, 0, 255),
+            color=(0, 20*i, 255),
             thickness=3,
         )
     for i in range(len(keypoints)):
@@ -99,21 +99,25 @@ def draw_history(camera, Thymio, path_img, keypoints,meas_kidnap_index,est_kidna
     cv2.circle(image_cnt, camera.goal_center.flatten(), 10, (0, 255, 0), -1)
 
     # Draw history
-    for i in range(len(meas_kidnap_index)-1):
-        cv2.polylines(
-            image_cnt,
-            [Thymio.xytheta_meas_hist[meas_kidnap_index(i):meas_kidnap_index(i+1), :2].astype(int).reshape(-1, 1, 2)],
-            isClosed=False,
-            color=(255, 10*i, 255),
-            thickness=2,
-        )
-    for i in range(len(est_kidnap_index)-1):
-        cv2.polylines(
-            image_cnt,
-            [Thymio.xytheta_est_hist[est_kidnap_index(i):est_kidnap_index(i+1), :2].astype(int).reshape(-1, 1, 2)],
-            isClosed=False,
-            color=(255, 10*i, 127),
-            thickness=2,
-        )
+    for i in range(Thymio.xytheta_est_hist.shape[0]):
+        cv2.circle(image_cnt, Thymio.xytheta_est_hist[i, :2].astype(int), 3, (255, 0, 127), -1)
+    for i in range(Thymio.xytheta_meas_hist.shape[0]):
+        cv2.circle(image_cnt, Thymio.xytheta_meas_hist[i, :2].astype(int), 2, (255, 0, 255), -1)
+
+    """
+    cv2.polylines(
+        image_cnt,
+        [Thymio.xytheta_meas_hist[:, :2].astype(int).reshape(-1, 1, 2)],
+        isClosed=False,
+        color=(255, 0, 255),
+        thickness=2,
+    )
+    cv2.polylines(
+        image_cnt,
+        [Thymio.xytheta_est_hist[:, :2].astype(int).reshape(-1, 1, 2)],
+        isClosed=False,
+        color=(255, 0, 127),
+        thickness=2,
+    )"""
     cv2.imshow("History", image_cnt)
     cv2.waitKey(1)
