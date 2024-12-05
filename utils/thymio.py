@@ -35,7 +35,7 @@ class Thymio_class:
         
         self.kalman_Q = np.diag([23, 23, 0.401])
         self.kalman_R = (
-            np.diag([5, 5, np.deg2rad(2)])
+            np.diag([4, 4, np.deg2rad(2)])
         )  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
         self.kalman_H = np.eye(3)
         self.kalman_P =  self.kalman_R
