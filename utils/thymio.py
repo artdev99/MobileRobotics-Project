@@ -215,3 +215,28 @@ def normalize_angle(angle): #restricts angle [rad] between -pi and pi
     while angle < -np.pi:
         angle += 2 * np.pi
     return angle
+
+
+def compute_Gu(theta, v_R, v_L, L, dt):
+    """
+    Compute the Jacobian Gu (derivative of motion equations w.r.t. control inputs)
+    """
+    # Midpoint angle
+    omega = (v_R - v_L) / L
+    theta_mid = theta + omega * dt / 2
+
+    # Partial derivatives
+    dx_dvR = (dt / 2) * np.cos(theta_mid) - (dt**2 / (4 * L)) * (v_R - v_L) * np.sin(theta_mid)
+    dx_dvL = (dt / 2) * np.cos(theta_mid) + (dt**2 / (4 * L)) * (v_R - v_L) * np.sin(theta_mid)
+    dy_dvR = (dt / 2) * np.sin(theta_mid) + (dt**2 / (4 * L)) * (v_R - v_L) * np.cos(theta_mid)
+    dy_dvL = (dt / 2) * np.sin(theta_mid) - (dt**2 / (4 * L)) * (v_R - v_L) * np.cos(theta_mid)
+    dtheta_dvR = dt / L
+    dtheta_dvL = -dt / L
+
+    # Assemble Jacobian
+    Gu = np.array([
+        [dx_dvR, dx_dvL],
+        [dy_dvR, dy_dvL],
+        [dtheta_dvR, dtheta_dvL]
+    ])
+    return Gu
