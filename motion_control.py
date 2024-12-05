@@ -8,7 +8,7 @@ SPEED_LIMIT = 500 #PWM
 
 def motion_control(thymio):
 
-        k_alpha = 0.0085*SPEED  #controls rotational velocity 
+        k_alpha = 0.010*SPEED  #controls rotational velocity #85
         k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
         x, y, theta, x_goal, y_goal = thymio.get_data_mm()
@@ -41,7 +41,7 @@ def check_obstacle(prox_values):
         return False        
 
 def avoid_obstacle(prox_values): #left to right
-    braitenberg = [-10/300, -20/300, 30/300, 21/300, 11/300] #left to right
+    braitenberg = [-5/300, -20/300, 30/300, 21/300, 6/300] #left to right
     v_mr, v_ml = SPEED, SPEED
     for i in range (len(prox_values)) :
         v_ml -= braitenberg[i] * prox_values[i]

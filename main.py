@@ -15,12 +15,13 @@ CAMERA_INDEX = 1 #0 if no webcam
 CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
 CORNER_ARUCO_SIZE = 65          #[mm]
 MIN_SIZE = 500 #minimum blob size
-COLOR_OBSTACLE = np.array([[30,30,90,130,100,255]]) #BGR
-COLOR_GOAL = np.array([30,40,20,80,140,65])        #BGR
+#COLOR_OBSTACLE = np.array([[30,30,90,130,100,255]]) #BGR
+COLOR_OBSTACLE = np.array([[110,70,0,255,100,20]]) #BGR
+COLOR_GOAL = np.array([30,90,60,80,255,90])        #BGR
 THYMIO_ID = 9
 GRID_L = 400  # [pixels]
 GRID_W = 300  # [pixels]
-DISTANCE_THRESH = 80  # [mm]
+DISTANCE_THRESH = 60  # [mm]
 deltqthist=[]
 ###########################################################
 # Main Code
@@ -71,7 +72,8 @@ async def main():
     step = 0
     kidnapped = False
     
-    while True :    
+    while True :  
+        
         step = step + 1
         
         # Update Image
@@ -168,7 +170,7 @@ async def main():
         else:
             if local_avoidance:
                 print("Recalculating path")
-                do_plot = True
+                #do_plot = True
                 path_planning = True
                 local_avoidance = False
                 draw_on_image(cam, Thymio, path_img) #on print l'ancien path ??
