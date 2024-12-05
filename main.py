@@ -74,13 +74,6 @@ async def main():
     while True :    
         step = step + 1
         
-        await node.set_variables(
-            {
-                "leds.bottom.left" : [0, 0, 0],
-                "leds.temperature" : [0, 0]
-            }
-        )
-        
         # Update Image
         cam.get_image()
         cam.correct_perspective_aruco(get_matrix = False)
@@ -123,8 +116,6 @@ async def main():
         if path_planning:
             if Thymio.target_keypoint is None or not np.any(Thymio.target_keypoint):
                 do_plot = True
-            # if Thymio.target_keypoint==None: #only possible at first iteration to not take time later
-            #     do_plot=True
             grid = discretize_image_eff(cam.thresholded_image, GRID_L, GRID_W)
             # Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
             found, path, _, _ = a_star_search(
@@ -170,16 +161,17 @@ async def main():
                 prox_values = await get_prox(node, client)
                 v_ml, v_mr = avoid_obstacle(prox_values)
                 await set_motors(node, v_ml, v_mr)
-            await set_motors(node, 1.4*SPEED*SPEED_SCALING_FACTOR, 1.4*SPEED*SPEED_SCALING_FACTOR) #move forward to leave the obstacle behind while recalculating path
+            await set_motors(node, 1.4*SPEED, 1.4*SPEED) #move forward to leave the obstacle behind while recalculating path
             #time.sleep(0.2)
             draw_on_image(cam, Thymio, path_img)
             continue
         else:
             if local_avoidance:
                 print("Recalculating path")
+                do_plot = True
                 path_planning = True
                 local_avoidance = False
-                draw_on_image(cam, Thymio, path_img)
+                draw_on_image(cam, Thymio, path_img) #on print l'ancien path ??
                 continue
         
         #Motion control    
@@ -189,7 +181,7 @@ async def main():
                     if((Thymio.distance_to_goal()) < DISTANCE_THRESH):
                         if(len(Thymio.keypoints) <= 1): #Thymio found the goal
                             print("Mission accomplished") 
-                            print(f"mean delta t:{np.mean(deltqthist)}")
+                            #print(f"mean delta t:{np.mean(deltqthist)}")
                             aw(node.stop())
                             aw(node.unlock())
                             draw_history(cam, Thymio, path_img, keypoints)

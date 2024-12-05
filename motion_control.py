@@ -1,14 +1,14 @@
 import numpy as np
 
-from thymio import L_AXIS, SPEED_SCALING_FACTOR, normalize_angle
+from thymio import L_AXIS, normalize_angle
 
 OBSTACLE_THRESHOLD = 800
-SPEED = 55 #[mm/s]
+SPEED = 150       #PWM
 SPEED_LIMIT = 500 #PWM
 
 def motion_control(thymio):
 
-        k_alpha = 0.0085*SPEED  #controls rotational velocity #0.6
+        k_alpha = 0.0085*SPEED  #controls rotational velocity 
         k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
         x, y, theta, x_goal, y_goal = thymio.get_data_mm()
@@ -18,12 +18,12 @@ def motion_control(thymio):
 
         delta_angle = normalize_angle(np.arctan2(delta_y, delta_x) - theta) #difference between the robot's orientation and the direction of the goal [rad]
 
-        v = SPEED                                                   #translational velocity [mm/s]
-        omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta)  #rotational velocity [rad/s]
+        v = SPEED                                                  #translational velocity PWM
+        omega = k_alpha*(delta_angle) - k_beta*(delta_angle+theta) #rotational velocity [rad/s]
 
         #Calculate motor speed
-        v_ml = (v+omega*L_AXIS)*SPEED_SCALING_FACTOR #PWM
-        v_mr = (v-omega*L_AXIS)*SPEED_SCALING_FACTOR #PWM
+        v_ml = (v+omega*L_AXIS) #PWM
+        v_mr = (v-omega*L_AXIS) #PWM
 
         return v_ml, v_mr
 
