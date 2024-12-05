@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 from skimage import measure
-import os
 ########################
 # Camera
 ########################
@@ -69,7 +68,7 @@ class camera_class:
 
             corners, self.size_aruco, self.corners_found = find_aruco_corners_size(self.image)
             if(not self.corners_found):
-                return;
+                return
             ordered_corners = order_points(corners)
             self.max_width_perspective, self.max_height_perspective = (
                 compute_destination_size(ordered_corners)
@@ -137,7 +136,6 @@ def full_detection_cnt_centroid(
     Goal_center = np.array([Goal_x, Goal_y]).reshape(2, 1)
 
     return thresholded_img, obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center
-    return thresholded_img, obstacle_cnt, obstacle_cnt_expnded, goal_cnt, Goal_center
 
 
 def fill_holes(bool_mask: np.ndarray) -> np.ndarray:
@@ -145,7 +143,6 @@ def fill_holes(bool_mask: np.ndarray) -> np.ndarray:
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     filled_mask = np.zeros_like(mask)
     cv2.drawContours(filled_mask, contours, -1, 255, thickness=cv2.FILLED)
-    return filled_mask, contours
     return filled_mask, contours
 
 
@@ -200,7 +197,7 @@ def find_aruco_corners_size(image):
 
     # Detect the markers
     gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    outer_corners = []
     if cv2.__version__ == "4.10.0":
         _aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
         corners, ids, _ = _aruco_detector.detectMarkers(gray_img)
@@ -208,9 +205,6 @@ def find_aruco_corners_size(image):
         corners, ids, _ = cv2.aruco.detectMarkers(
             gray_img, aruco_dict, parameters=parameters
         )
-
-    outer_corners = []
-    corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
     # Define the order of markers: top-left, bottom-left, bottom-right, top-right
     marker_order = [0, 1, 2, 10]
     aruco_corner = [0, 3, 2, 1]  # top-left, bottom-left, bottom-right, top-right of each aruco

@@ -1,6 +1,6 @@
 import numpy as np
 
-from thymio import L_AXIS, normalize_angle
+from utils.thymio import L_AXIS, normalize_angle
 
 OBSTACLE_THRESHOLD = 800
 SPEED = 150       #PWM
