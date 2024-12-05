@@ -131,7 +131,7 @@ class Thymio_class:
         )
 
         # Predict covariance
-        self.kalman_P = G @ self.kalman_P @ G.T + Q
+        self.kalman_P = G @ self.kalman_P @ G.T + Q # + G_u @ self.kalman_Q_ctrl @ G_u.T
         self.xytheta_est[:2] = self.xytheta_est[:2] * self.pixbymm  # go in pix
 
     def kalman_update_state(self):
@@ -184,6 +184,37 @@ def compute_G_Q(theta, v_L, v_R, wheel_base, dt, process_cov):
 
     return G, Q
 
+def compute_Gu(theta, v_R, v_L, wheel_base, dt):
+    """
+    Compute the Jacobian Gu (derivative of motion equations w.r.t. control inputs)
+    """
+
+    # Precompute common terms to be a bit faster :)
+    v = 0.5 * (v_L + v_R) 
+    omega = (v_L - v_R) / wheel_base 
+    theta_mid = theta + 0.5 * omega * dt  # Midpoint angle
+
+    cos_theta = np.cos(theta_mid)
+    sin_theta = np.sin(theta_mid)
+
+    delta_t_sq = dt ** 2
+    common_factor = (v * delta_t_sq) / (4.0 * L)
+
+    # Compute partial derivatives
+    G_u=np.empty((3,2))
+    G_u[0,0] = 0.5 * cos_theta - common_factor * sin_theta
+    G_u[0,1] = 0.5 * cos_theta + common_factor * sin_theta
+
+    G_u[1,0] = 0.5 * sin_theta + common_factor * cos_theta
+    G_u[1,1] = 0.5 * sin_theta - common_factor * cos_theta
+
+    G_u[2,0] = dt / wheel_base
+    G_u[2,1] = -dt / wheel_base
+    return G_u
+
+
+
+
 async def gather_data(node):
     v_L = []
     v_R = []
@@ -217,26 +248,3 @@ def normalize_angle(angle): #restricts angle [rad] between -pi and pi
     return angle
 
 
-def compute_Gu(theta, v_R, v_L, L, dt):
-    """
-    Compute the Jacobian Gu (derivative of motion equations w.r.t. control inputs)
-    """
-    # Midpoint angle
-    omega = (v_R - v_L) / L
-    theta_mid = theta + omega * dt / 2
-
-    # Partial derivatives
-    dx_dvR = (dt / 2) * np.cos(theta_mid) - (dt**2 / (4 * L)) * (v_R - v_L) * np.sin(theta_mid)
-    dx_dvL = (dt / 2) * np.cos(theta_mid) + (dt**2 / (4 * L)) * (v_R - v_L) * np.sin(theta_mid)
-    dy_dvR = (dt / 2) * np.sin(theta_mid) + (dt**2 / (4 * L)) * (v_R - v_L) * np.cos(theta_mid)
-    dy_dvL = (dt / 2) * np.sin(theta_mid) - (dt**2 / (4 * L)) * (v_R - v_L) * np.cos(theta_mid)
-    dtheta_dvR = dt / L
-    dtheta_dvL = -dt / L
-
-    # Assemble Jacobian
-    Gu = np.array([
-        [dx_dvR, dx_dvL],
-        [dy_dvR, dy_dvL],
-        [dtheta_dvR, dtheta_dvL]
-    ])
-    return Gu
