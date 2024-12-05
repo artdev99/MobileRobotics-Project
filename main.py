@@ -170,7 +170,7 @@ async def main():
                 prox_values = await get_prox(node, client)
                 v_ml, v_mr = avoid_obstacle(prox_values)
                 await set_motors(node, v_ml, v_mr)
-            await set_motors(node, SPEED*SPEED_SCALING_FACTOR, SPEED*SPEED_SCALING_FACTOR) #move forward to leave the obstacle behind while recalculating path
+            await set_motors(node, 1.4*SPEED*SPEED_SCALING_FACTOR, 1.4*SPEED*SPEED_SCALING_FACTOR) #move forward to leave the obstacle behind while recalculating path
             #time.sleep(0.2)
             draw_on_image(cam, Thymio, path_img)
             continue

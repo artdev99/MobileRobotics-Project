@@ -2,7 +2,7 @@ import numpy as np
 
 from thymio import L_AXIS, SPEED_SCALING_FACTOR, normalize_angle
 
-OBSTACLE_THRESHOLD = 1000
+OBSTACLE_THRESHOLD = 800
 SPEED = 55 #[mm/s]
 SPEED_LIMIT = 500 #PWM
 
