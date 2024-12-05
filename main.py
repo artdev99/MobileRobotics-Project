@@ -8,7 +8,6 @@ from utils.motion_control import *
 from utils.buttons import*
 from utils.drawings import *
 from utils.color_thresholds import load_thresholds
-
 ###########################################################
 # Parameters
 ###########################################################
@@ -16,11 +15,10 @@ CAMERA_INDEX = 1 #0 if no webcam
 CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
 CORNER_ARUCO_SIZE = 65          #[mm]
 MIN_SIZE = 500 #minimum blob size
-#COLOR_OBSTACLE = np.array([[30,30,90,130,100,255]]) #BGR
-#COLOR_OBSTACLE = np.array([[110,70,0,255,100,20]]) #BGR
-#COLOR_GOAL = np.array([30,90,60,80,255,90])        #BGR
-COLOR_OBSTACLE = load_thresholds("color_obstacles.txt").reshape(1, -1)
-COLOR_GOAL = load_thresholds("color_goal.txt")
+COLOR_OBSTACLE = np.array([[80, 40, 0, 255, 70, 20]]) #BGR
+COLOR_GOAL = np.array([0, 77, 0, 68, 255, 118])         #BGR
+#COLOR_OBSTACLE = load_thresholds("color_obstacles.txt").reshape(1,-1) # run the notebook inside utils and save thresholds
+#COLOR_GOAL = load_thresholds("color_goal.txt")
 THYMIO_ID = 9
 GRID_L = 400  # [pixels]
 GRID_W = 300  # [pixels]
@@ -30,9 +28,7 @@ deltqthist=[]
 # Main Code
 ###########################################################
 from tdmclient import ClientAsync, aw
-
 client = ClientAsync()
-
 
 async def main():
 
@@ -50,7 +46,6 @@ async def main():
     program = '''
         # Turn off LEDs during initialization
         call leds.temperature(0, 0)
-        call leds.prox.h(0, 0, 0, 0, 0, 0, 0, 0)
         call leds.prox.v(0, 0)
         '''
     await node.compile(program)
@@ -83,6 +78,7 @@ async def main():
     local_avoidance = False
     step = 0
     kidnapped = False
+    path_img = None
     
     while True :  
         
