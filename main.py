@@ -11,8 +11,8 @@ from utils.color_thresholds import load_thresholds
 ###########################################################
 # Parameters
 ###########################################################
-COLOR_OBSTACLE = np.array([[80, 40, 0, 255, 80, 20]]) #BGR
-COLOR_GOAL = np.array([0, 77, 0, 68, 255, 118])         #BGR
+COLOR_OBSTACLE = np.array([[80, 40, 0, 255, 80, 20]]) # BGR
+COLOR_GOAL = np.array([0, 77, 0, 68, 255, 118])       # BGR
 #COLOR_OBSTACLE = load_thresholds("color_obstacles.txt").reshape(1,-1) # run the notebook inside utils and save thresholds
 #COLOR_GOAL = load_thresholds("color_goal.txt")
 ###########################################################
@@ -47,7 +47,6 @@ async def main():
     while not cam.corners_found:
         cam = camera_class(COLOR_OBSTACLE, COLOR_GOAL)
 
-
     # Thymio initialization
     Thymio = Thymio_class(cam)
 
@@ -57,6 +56,7 @@ async def main():
     kidnapped = False
     path_img = None 
     path_img_hist = []
+
     while True :  
         
         step = step + 1
@@ -69,12 +69,11 @@ async def main():
         if not kidnapped: 
             Thymio.Thymio_position_aruco(cam.persp_image)
         Thymio.delta_time_update()
-        #print(f"Time for the loop:{Thymio.delta_t}")
 
         #Kalman Filter
         v_L, v_R = await gather_data(node)
         Thymio.kalman_predict_state(v_L, v_R)  
-        if Thymio.Thymio_detected:  #only update if Thymio detected
+        if Thymio.Thymio_detected:  # Only update if Thymio detected
             Thymio.kalman_update_state()
 
         #Update history for final plot
@@ -101,7 +100,7 @@ async def main():
                 Thymio.delta_time_update()
                 v_L, v_R = await gather_data(node)
                 Thymio.kalman_predict_state(v_L, v_R)  
-                if Thymio.Thymio_detected:  #only update if Thymio detected
+                if Thymio.Thymio_detected:  # Only update if Thymio detected
                     Thymio.kalman_update_state()
                 draw_on_image(cam, Thymio, path_img)
             print("Thymio back on the ground")
@@ -162,8 +161,7 @@ async def main():
         else:
             if local_avoidance:
                 print("Recalculating path")
-                #do_plot = True
-                await set_motors(node, 1.3*SPEED, 1.3*SPEED) #move forward to leave the obstacle behind while recalculating path
+                await set_motors(node, 1.3*SPEED, 1.3*SPEED) # Move forward to leave the obstacle behind while recalculating path
                 for i in range(20):
                     cam.get_image()
                     cam.correct_perspective_aruco(get_matrix = False)
@@ -171,7 +169,7 @@ async def main():
                     Thymio.delta_time_update()
                     v_L, v_R = await gather_data(node)
                     Thymio.kalman_predict_state(v_L, v_R)  
-                    if Thymio.Thymio_detected:  #only update if Thymio detected
+                    if Thymio.Thymio_detected:  # Only update if Thymio detected
                         Thymio.kalman_update_state()
                     draw_on_image(cam, Thymio, path_img)
                     Thymio.xytheta_meas_hist = np.vstack((Thymio.xytheta_meas_hist, Thymio.xytheta_meas))
@@ -205,8 +203,6 @@ async def main():
             break
     
     cam.cam.release()
-    # cv2.destroyAllWindows()
-
 
 # Run the main asynchronous function
 while True:
