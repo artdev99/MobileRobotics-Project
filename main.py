@@ -155,7 +155,6 @@ async def main():
                 print("Obstacle!")
            
             local_avoidance = True
-            prox_values = await get_prox(node, client)
             v_ml, v_mr = avoid_obstacle(prox_values)
             draw_on_image(cam, Thymio, path_img)
             await set_motors(node, v_ml, v_mr)
@@ -165,8 +164,7 @@ async def main():
                 print("Recalculating path")
                 #do_plot = True
                 await set_motors(node, 1.3*SPEED, 1.3*SPEED) #move forward to leave the obstacle behind while recalculating path
-                time.sleep(0.7)
-                for i in range(30):
+                for i in range(20):
                     cam.get_image()
                     cam.correct_perspective_aruco(get_matrix = False)
                     Thymio.Thymio_position_aruco(cam.persp_image)
@@ -176,6 +174,9 @@ async def main():
                     if Thymio.Thymio_detected:  #only update if Thymio detected
                         Thymio.kalman_update_state()
                     draw_on_image(cam, Thymio, path_img)
+                    Thymio.xytheta_meas_hist = np.vstack((Thymio.xytheta_meas_hist, Thymio.xytheta_meas))
+                    Thymio.xytheta_est_hist = np.vstack((Thymio.xytheta_est_hist, Thymio.xytheta_est))
+                    time.sleep(0.0175)
                 path_planning = True
                 local_avoidance = False
                 continue
