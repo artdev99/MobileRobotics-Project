@@ -55,8 +55,8 @@ async def main():
     local_avoidance = False
     step = 0
     kidnapped = False
-    path_img = None
-    
+    path_img = None 
+    path_img_hist = []
     while True :  
         
         step = step + 1
@@ -66,7 +66,8 @@ async def main():
         cam.correct_perspective_aruco(get_matrix = False)
         
         # Thymio Position and motor
-        Thymio.Thymio_position_aruco(cam.persp_image)
+        if not kidnapped: 
+            Thymio.Thymio_position_aruco(cam.persp_image)
         Thymio.delta_time_update()
         #print(f"Time for the loop:{Thymio.delta_t}")
 
@@ -77,9 +78,8 @@ async def main():
             Thymio.kalman_update_state()
 
         #Update history for final plot
-        if((step % 3) == 0):
-            Thymio.xytheta_meas_hist = np.vstack((Thymio.xytheta_meas_hist, Thymio.xytheta_meas))
-            Thymio.xytheta_est_hist = np.vstack((Thymio.xytheta_est_hist, Thymio.xytheta_est))
+        Thymio.xytheta_meas_hist = np.vstack((Thymio.xytheta_meas_hist, Thymio.xytheta_meas))
+        Thymio.xytheta_est_hist = np.vstack((Thymio.xytheta_est_hist, Thymio.xytheta_est))
         
         #Check kidnapping
         if(await check_kidnapping(node)):
@@ -87,6 +87,8 @@ async def main():
             if(kidnapped == False):
                 print("Thymio was kidnapped !")
             kidnapped = True
+            Thymio.Thymio_detected=False
+
             await set_motors(node, 0, 0)
             continue
         if(kidnapped):
@@ -94,8 +96,8 @@ async def main():
             kidnapped = False
             path_planning = True
             do_plot = True
-            #time.sleep(2)
             print("Thymio back on the ground")
+            time.sleep(2)
             continue
             
         #Path Planning
@@ -132,6 +134,7 @@ async def main():
             path_img = path_img[::-1]
 
             keypoints = find_keypoints(path_img)
+            path_img_hist.append(path_img)
             Thymio.keypoints=keypoints[1:]
             Thymio.target_keypoint = keypoints[0]
             
@@ -168,7 +171,7 @@ async def main():
                             print("Mission accomplished") 
                             aw(node.stop())
                             aw(node.unlock())
-                            draw_history(cam, Thymio, path_img, keypoints)
+                            draw_history(cam, Thymio, path_img_hist, keypoints)
                             break
                         Thymio.keypoints = Thymio.keypoints[1:]
                         Thymio.target_keypoint = Thymio.keypoints[0]
@@ -176,11 +179,11 @@ async def main():
                     await set_motors(node, v_ml, v_mr)
                 draw_on_image(cam, Thymio, path_img)
 
-        #Check stop
+        #Check stop            
         if(await check_stop_button(node, client)):
             aw(node.stop())
             aw(node.unlock())
-            draw_history(cam, Thymio, path_img, keypoints)
+            draw_history(cam, Thymio, path_img_hist, keypoints)
             break
     
     cam.cam.release()
