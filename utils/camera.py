@@ -2,10 +2,10 @@ import numpy as np
 import cv2
 from skimage import measure
 
-CAMERA_INDEX = 1 # 0 if no webcam
+CAMERA_INDEX = 1                # 0 if no webcam
 CORNER_ARUCO_ID = [0, 1, 2, 10] # top-left, bottom-left, bottom-right, top-right
 CORNER_ARUCO_SIZE = 65          # [mm]
-MIN_SIZE = 500 #minimum blob size
+MIN_SIZE = 500                  # Minimum blob size
 MARGIN = 1.4
 
 class camera_class:
@@ -197,7 +197,7 @@ def find_aruco_corners_size(image):
         
     # Define the order of markers: top-left, bottom-left, bottom-right, top-right
     marker_order = [0, 1, 2, 10]
-    aruco_corner = [0, 3, 2, 1]  # top-left, bottom-left, bottom-right, top-right of each aruco
+    aruco_corner = [0, 3, 2, 1]  
     missing = [elem for elem in marker_order if elem not in ids]
     if len(missing)>0:
         print("Corners are missing")
