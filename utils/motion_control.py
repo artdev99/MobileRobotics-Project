@@ -39,7 +39,7 @@ def check_obstacle(prox_values):
         return False        
 
 def avoid_obstacle(prox_values): #left to right
-    braitenberg = [-5/300, -20/300, 30/300, 21/300, 6/300] #left to right
+    braitenberg = [-2/300, -10/300, 25/300, 11/300, 3/300] #left to right
     v_mr, v_ml = SPEED, SPEED
     for i in range (len(prox_values)) :
         v_ml -= braitenberg[i] * prox_values[i]

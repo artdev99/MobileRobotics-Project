@@ -17,11 +17,6 @@ def draw_on_image(camera, Thymio, path_img):
         )
     cv2.circle(image_cnt, camera.goal_center.flatten(), 10, (0, 255, 0), -1)
     
-    if(Thymio.keypoints is not None):
-        for i in range(len(Thymio.keypoints)):
-            cv2.circle(image_cnt, Thymio.keypoints[i], 10, (200, 240, 190), -1)
-        cv2.circle(image_cnt, Thymio.target_keypoint, 10, (0, 255, 255), -1)
-
     #Thymio measured
     radius = 1.5 * camera.size_aruco
     if Thymio.Thymio_detected:
@@ -77,6 +72,12 @@ def draw_on_image(camera, Thymio, path_img):
         (255, 0, 255),
         2,
     )
+    
+    if(Thymio.keypoints is not None):
+        for i in range(len(Thymio.keypoints)):
+            cv2.circle(image_cnt, Thymio.keypoints[i], 10, (200, 240, 190), -1)
+        cv2.circle(image_cnt, Thymio.target_keypoint, 10, (0, 255, 255), -1)
+    
     cv2.imshow("Camera View", image_cnt)
     cv2.waitKey(1)
 
@@ -94,15 +95,16 @@ def draw_history(camera, Thymio, path_img, keypoints):
             color=(0, 20*i, 255),
             thickness=3,
         )
-    for i in range(len(keypoints)):
-        cv2.circle(image_cnt, keypoints[i], 5, (200, 240, 190), -1)
-    cv2.circle(image_cnt, camera.goal_center.flatten(), 10, (0, 255, 0), -1)
 
     # Draw history
     for i in range(Thymio.xytheta_est_hist.shape[0]):
         cv2.circle(image_cnt, Thymio.xytheta_est_hist[i, :2].astype(int), 3, (255, 0, 127), -1)
     for i in range(Thymio.xytheta_meas_hist.shape[0]):
         cv2.circle(image_cnt, Thymio.xytheta_meas_hist[i, :2].astype(int), 2, (255, 0, 255), -1)
+        
+    for i in range(len(keypoints)):
+        cv2.circle(image_cnt, keypoints[i], 5, (200, 240, 190), -1)
+    cv2.circle(image_cnt, camera.goal_center.flatten(), 10, (0, 255, 0), -1)
 
     """
     cv2.polylines(

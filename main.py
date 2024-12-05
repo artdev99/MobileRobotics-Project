@@ -11,7 +11,7 @@ from utils.color_thresholds import load_thresholds
 ###########################################################
 # Parameters
 ###########################################################
-COLOR_OBSTACLE = np.array([[80, 40, 0, 255, 70, 20]]) #BGR
+COLOR_OBSTACLE = np.array([[80, 40, 0, 255, 80, 20]]) #BGR
 COLOR_GOAL = np.array([0, 77, 0, 68, 255, 118])         #BGR
 #COLOR_OBSTACLE = load_thresholds("color_obstacles.txt").reshape(1,-1) # run the notebook inside utils and save thresholds
 #COLOR_GOAL = load_thresholds("color_goal.txt")
@@ -88,16 +88,23 @@ async def main():
                 print("Thymio was kidnapped !")
             kidnapped = True
             Thymio.Thymio_detected=False
-
             await set_motors(node, 0, 0)
             continue
         if(kidnapped):
-            draw_on_image(cam, Thymio, path_img)
             kidnapped = False
             path_planning = True
-            do_plot = True
+            #do_plot = True
+            for i in range(30):
+                cam.get_image()
+                cam.correct_perspective_aruco(get_matrix = False)
+                Thymio.Thymio_position_aruco(cam.persp_image)
+                Thymio.delta_time_update()
+                v_L, v_R = await gather_data(node)
+                Thymio.kalman_predict_state(v_L, v_R)  
+                if Thymio.Thymio_detected:  #only update if Thymio detected
+                    Thymio.kalman_update_state()
+                draw_on_image(cam, Thymio, path_img)
             print("Thymio back on the ground")
-            time.sleep(2)
             continue
             
         #Path Planning
@@ -111,14 +118,14 @@ async def main():
                 grid1_coord2grid2_coord(
                     np.array([Thymio.xytheta_est[1], Thymio.xytheta_est[0]]),
                     cam.persp_image,
-                    grid,
+                    grid
                 ),
                 grid1_coord2grid2_coord(
                     np.array([cam.goal_center[1], cam.goal_center[0]]),
                     cam.persp_image,
-                    grid,
+                    grid
                 ),
-                do_plot,
+                do_plot
             )
 
             if not found:
@@ -136,7 +143,7 @@ async def main():
             keypoints = find_keypoints(path_img)
             path_img_hist.append(path_img)
             Thymio.keypoints=keypoints[1:]
-            Thymio.target_keypoint = keypoints[0]
+            Thymio.target_keypoint = Thymio.keypoints[0]
             
             do_plot = False
             path_planning = False
@@ -144,23 +151,33 @@ async def main():
         #Obstacle detection
         prox_values = await get_prox(node, client)
         if (check_obstacle(prox_values)):
-            print("Obstacle")
+            if not local_avoidance:
+                print("Obstacle!")
+           
             local_avoidance = True
-            while (check_obstacle(prox_values)):
-                prox_values = await get_prox(node, client)
-                v_ml, v_mr = avoid_obstacle(prox_values)
-                await set_motors(node, v_ml, v_mr)
-            await set_motors(node, 1.4*SPEED, 1.4*SPEED) #move forward to leave the obstacle behind while recalculating path
-            #time.sleep(0.2)
+            prox_values = await get_prox(node, client)
+            v_ml, v_mr = avoid_obstacle(prox_values)
             draw_on_image(cam, Thymio, path_img)
+            await set_motors(node, v_ml, v_mr)
             continue
         else:
             if local_avoidance:
                 print("Recalculating path")
                 #do_plot = True
+                await set_motors(node, 1.3*SPEED, 1.3*SPEED) #move forward to leave the obstacle behind while recalculating path
+                time.sleep(0.7)
+                for i in range(30):
+                    cam.get_image()
+                    cam.correct_perspective_aruco(get_matrix = False)
+                    Thymio.Thymio_position_aruco(cam.persp_image)
+                    Thymio.delta_time_update()
+                    v_L, v_R = await gather_data(node)
+                    Thymio.kalman_predict_state(v_L, v_R)  
+                    if Thymio.Thymio_detected:  #only update if Thymio detected
+                        Thymio.kalman_update_state()
+                    draw_on_image(cam, Thymio, path_img)
                 path_planning = True
                 local_avoidance = False
-                draw_on_image(cam, Thymio, path_img) #on print l'ancien path ??
                 continue
         
         #Motion control    

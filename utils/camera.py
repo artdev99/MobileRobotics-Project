@@ -6,6 +6,7 @@ CAMERA_INDEX = 1 #0 if no webcam
 CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
 CORNER_ARUCO_SIZE = 65          #[mm]
 MIN_SIZE = 500 #minimum blob size
+MARGIN = 1.4
 
 ########################
 # Camera
@@ -98,7 +99,7 @@ def full_detection_cnt_centroid(
 ) -> np.ndarray:
     thresholded_img = np.zeros_like(image)
     Thymio_radius_mm = 70  # mm
-    radius = Thymio_radius_mm * pixbymm
+    radius = Thymio_radius_mm * pixbymm * MARGIN
     # Find Obstacles
     obstacle_mask = 255 * np.ones(image.shape[:2], dtype=np.uint8)
     for i in range(thresh_obstacle.shape[0]):
