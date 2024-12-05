@@ -15,12 +15,13 @@ CAMERA_INDEX = 1 #0 if no webcam
 CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
 CORNER_ARUCO_SIZE = 65          #[mm]
 MIN_SIZE = 500 #minimum blob size
-COLOR_OBSTACLE = np.array([[30,20,120,65,100,255]]) #BGR
-COLOR_GOAL = np.array([30,40,20,80,150,65])        #BGR
+COLOR_OBSTACLE = np.array([[30,30,90,130,100,255]]) #BGR
+COLOR_GOAL = np.array([30,40,20,80,140,65])        #BGR
 THYMIO_ID = 9
 GRID_L = 400  # [pixels]
 GRID_W = 300  # [pixels]
-DISTANCE_THRESH = 75  # [mm]
+DISTANCE_THRESH = 80  # [mm]
+deltqthist=[]
 ###########################################################
 # Main Code
 ###########################################################
@@ -72,12 +73,52 @@ async def main():
     
     while True :    
         step = step + 1
+        
+        await node.set_variables(
+            {
+                "leds.bottom.left" : [0, 0, 0],
+                "leds.temperature" : [0, 0]
+            }
+        )
+        
         # Update Image
         cam.get_image()
         cam.correct_perspective_aruco(get_matrix = False)
         
-        #Thymio.Thymio_position_aruco(cam.persp_image)
+        # Thymio Position and motor
+        Thymio.Thymio_position_aruco(cam.persp_image)
+        Thymio.delta_time_update()
+        deltqthist.append(Thymio.delta_t)
+        #print(f"Time for the loop:{Thymio.delta_t}")
+
+        #Kalman Filter
+        v_L, v_R = await gather_data(node)
+        Thymio.kalman_predict_state(v_L, v_R)  
+        if Thymio.Thymio_detected:  #only update if Thymio detected
+            Thymio.kalman_update_state()
+
+        #Update history for final plot
+        if((step % 3) == 0):
+            Thymio.xytheta_meas_hist = np.vstack((Thymio.xytheta_meas_hist, Thymio.xytheta_meas))
+            Thymio.xytheta_est_hist = np.vstack((Thymio.xytheta_est_hist, Thymio.xytheta_est))
         
+        #Check kidnapping
+        if(await check_kidnapping(node)):
+            draw_on_image(cam, Thymio, path_img)
+            if(kidnapped == False):
+                print("Thymio was kidnapped !")
+            kidnapped = True
+            await set_motors(node, 0, 0)
+            continue
+        if(kidnapped):
+            draw_on_image(cam, Thymio, path_img)
+            kidnapped = False
+            path_planning = True
+            do_plot = True
+            #time.sleep(2)
+            print("Thymio back on the ground")
+            continue
+            
         #Path Planning
         if path_planning:
             if Thymio.target_keypoint is None or not np.any(Thymio.target_keypoint):
@@ -102,7 +143,9 @@ async def main():
             )
 
             if not found:
-                print("couldn't find path, stopping the mission")
+                print("Couldn't find path, stopping the mission")
+                draw_on_image(cam, Thymio, None)
+                cv2.waitKey(10)
                 aw(node.stop())
                 aw(node.unlock())
                 break
@@ -117,54 +160,23 @@ async def main():
             
             do_plot = False
             path_planning = False
-
-        # Thymio Position and motor
-        Thymio.Thymio_position_aruco(cam.persp_image)
-        Thymio.delta_time_update()
-        print(f"Time for the loop:{Thymio.delta_t}")
-
-        #Kalman Filter
-        v_L, v_R = await gather_data(node)
-        Thymio.kalman_predict_state(v_L, v_R)  
-        if Thymio.Thymio_detected:  #only update if Thymio detected
-            Thymio.kalman_update_state()
-
-        #Update history for final plot
-        if((step % 3) == 0):
-            Thymio.xytheta_meas_hist = np.vstack((Thymio.xytheta_meas_hist, Thymio.xytheta_meas))
-            Thymio.xytheta_est_hist = np.vstack((Thymio.xytheta_est_hist, Thymio.xytheta_est))
-        
-        #Check kidnapping
-        if(await check_kidnapping(node)):
-            draw_on_image(cam, Thymio, path_img)
-            if(kidnapped == False):
-                print("Thymio was kidnapped !")
-            kidnapped = True
-            await set_motors(node, 0, 0)
-            continue
-        if(kidnapped):
-            kidnapped = False
-            path_planning = True
-            do_plot = True
-            time.sleep(2)
-            print("Thymio back on the ground")
         
         #Obstacle detection
         prox_values = await get_prox(node, client)
-        if (await check_obstacle(prox_values)):
-            print("obstacle")
+        if (check_obstacle(prox_values)):
+            print("Obstacle")
             local_avoidance = True
-            while (await check_obstacle(prox_values)):
+            while (check_obstacle(prox_values)):
                 prox_values = await get_prox(node, client)
                 v_ml, v_mr = avoid_obstacle(prox_values)
                 await set_motors(node, v_ml, v_mr)
-            await set_motors(node, 50, 50) #move forward to leave the obstacle behind while recalculating path
+            await set_motors(node, SPEED*SPEED_SCALING_FACTOR, SPEED*SPEED_SCALING_FACTOR) #move forward to leave the obstacle behind while recalculating path
             #time.sleep(0.2)
             draw_on_image(cam, Thymio, path_img)
             continue
         else:
             if local_avoidance:
-                print("recalculating path")
+                print("Recalculating path")
                 path_planning = True
                 local_avoidance = False
                 draw_on_image(cam, Thymio, path_img)
@@ -177,6 +189,7 @@ async def main():
                     if((Thymio.distance_to_goal()) < DISTANCE_THRESH):
                         if(len(Thymio.keypoints) <= 1): #Thymio found the goal
                             print("Mission accomplished") 
+                            print(f"mean delta t:{np.mean(deltqthist)}")
                             aw(node.stop())
                             aw(node.unlock())
                             draw_history(cam, Thymio, path_img, keypoints)
@@ -193,7 +206,7 @@ async def main():
             aw(node.unlock())
             draw_history(cam, Thymio, path_img, keypoints)
             break
-
+    
     cam.cam.release()
     # cv2.destroyAllWindows()
 

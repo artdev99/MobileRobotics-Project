@@ -4,8 +4,8 @@ from heapq import heappush, heappop
 import matplotlib.pyplot as plt
 
 ANGLE_THRESHOLD = np.radians(20)   # threshold under which changes of directions are ignored [rad]
-STEP = 6                          # step (in number of cells) between each cell we study
-COUNTER_THRESHOLD = 7              # max number of steps between keypoints
+STEP = 10                          # step (in number of cells) between each cell we study
+COUNTER_THRESHOLD = 5              # max number of steps between keypoints
 
 def discretize_image_eff(image, grid_size0, grid_size1):
 
