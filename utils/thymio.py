@@ -6,7 +6,7 @@ THYMIO_ID = 9
 L_AXIS = 92                    #wheel axis length [mm]
 SPEED_SCALING_FACTOR = 1/0.38  #measured
 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s, SPEED_SCALING_FACTOR = 1/0.4
-KIDNAPPING_THRESHOLD = 800     #for prox.ground.delta
+KIDNAPPING_THRESHOLD = 500     #for prox.ground.delta
 DISTANCE_THRESH = 60  #[mm]
  
 ########################
@@ -27,12 +27,19 @@ class Thymio_class:
         self.xytheta_meas_hist = np.empty((0, 3))
         self.xytheta_est_hist = np.empty((0, 3))
         # Kalman
-        self.kalman_Q = np.diag([7.5, 7.5, np.deg2rad(5)]) ** 2
+        """self.kalman_Q = np.diag([7.5, 7.5, np.deg2rad(5)]) ** 2
         self.kalman_R = (
             np.diag([5, 5, np.deg2rad(1)]) ** 2
         )  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.kalman_H = np.eye(3)"""
+        
+        self.kalman_Q = np.diag([23, 23, 0.401])
+        self.kalman_R = (
+            np.diag([5, 5, np.deg2rad(2)])
+        )  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
         self.kalman_H = np.eye(3)
-        self.kalman_P = 10 * self.kalman_R
+        self.kalman_P =  self.kalman_R
+        self.kalman_Q_ctrl=np.diag([31, 29])
         # self.v_var=151 # (v_var=var_L+var_R)
 
     def Thymio_position_aruco(self, img):
@@ -133,7 +140,8 @@ class Thymio_class:
         )
 
         # Predict covariance
-        self.kalman_P = G @ self.kalman_P @ G.T + Q # + G_u @ self.kalman_Q_ctrl @ G_u.T
+        G_u=compute_Gu(theta, v_R, v_L, L_AXIS, self.delta_t)
+        self.kalman_P = G @ self.kalman_P @ G.T  + G_u @ self.kalman_Q_ctrl @ G_u.T #+ Q 
         self.xytheta_est[:2] = self.xytheta_est[:2] * self.pixbymm  # go in pix
 
     def kalman_update_state(self):
@@ -200,7 +208,7 @@ def compute_Gu(theta, v_R, v_L, wheel_base, dt):
     sin_theta = np.sin(theta_mid)
 
     delta_t_sq = dt ** 2
-    common_factor = (v * delta_t_sq) / (4.0 * L)
+    common_factor = (v * delta_t_sq) / (4.0 * wheel_base)
 
     # Compute partial derivatives
     G_u=np.empty((3,2))

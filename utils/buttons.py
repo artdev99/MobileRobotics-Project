@@ -6,7 +6,7 @@ async def wait_for_start_button(node, client):
 async def check_stop_button(node, client):
     await node.wait_for_variables({"button.center"})
     if (node.v.button.center == 1): 
-        print("stopping")
+        print("Stopping")
         return True
     else :
         return False
