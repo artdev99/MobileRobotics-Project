@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 GRID_L = 400  # [pixels]
 GRID_W = 300  # [pixels]
 
-ANGLE_THRESHOLD = np.radians(20)   # threshold under which changes of directions are ignored [rad]
-STEP = 10                          # step (in number of cells) between each cell we study
-COUNTER_THRESHOLD = 5              # max number of steps between keypoints
+ANGLE_THRESHOLD = np.radians(20)   # Threshold under which changes of directions are ignored [rad]
+STEP = 10                          # Step (in number of pixels) between each cell we study
+COUNTER_THRESHOLD = 5              # Max number of steps between keypoints
 
 def discretize_image_eff(image):
 
@@ -53,6 +53,7 @@ def a_star_search(map_grid, start, goal, do_plot):
         # Check if the goal has been reached
         if current_pos == goal:
             break
+
         # Get the neighbors of the current node 8 neighbors
         neighbors = [
             (current_pos[0], current_pos[1] + 1),
@@ -74,20 +75,13 @@ def a_star_search(map_grid, start, goal, do_plot):
                 and (0 <= neighbor[1] < map_grid.shape[1])
                 and (map_grid[neighbor] > -1)
             ):
-
                 # Calculate tentative_g_cost
                 if (neighbor[0] == current_pos[0]) or (
                     neighbor[1] == current_pos[1]
-                ):  # if goes straight
-                    tentative_g_cost = g_costs[current_pos] + (
-                        map_grid[neighbor]
-                    )  # cost is 1 y default on the map_grid
+                ):  # If goes straight
+                    tentative_g_cost = g_costs[current_pos] + (map_grid[neighbor])  # Cost is 1 y default on the map_grid
                 else:
-                    tentative_g_cost = g_costs[current_pos] + (
-                        map_grid[neighbor]
-                    ) * np.sqrt(
-                        2
-                    )  # going diagonnaly is going further
+                    tentative_g_cost = g_costs[current_pos] + (map_grid[neighbor]) * np.sqrt(2)  # Going diagonnaly is going further
 
                 # If this path to neighbor is better than any previous one
                 if neighbor not in g_costs or tentative_g_cost < g_costs[neighbor]:
@@ -99,13 +93,13 @@ def a_star_search(map_grid, start, goal, do_plot):
                     # Add neighbor to open set
                     heappush(open_set, (f_cost, tentative_g_cost, neighbor))
 
-    # Reconstruct path
     if current_pos == goal:
         # Reconstruct the path
         path = [goal]
         while path[-1] != start:
             path.append(came_from[path[-1]])
         path = np.array(path[::-1]).T
+
         if do_plot:
             plt.figure(figsize=(10, 10))
             plt.imshow(map_grid, cmap="Greys", origin="lower")
@@ -127,15 +121,9 @@ def a_star_search(map_grid, start, goal, do_plot):
             plt.ylabel("Y-axis")
             plt.gca().invert_yaxis()  # Optional: invert Y-axis to match matrix indexing
             plt.show()
-        return (
-            True,
-            path,
-            explored,
-            cost_map,
-        )  # Return reversed path, explored cells and cost_map for visualization
+        return (True, path, explored, cost_map)  # Return reversed path, explored cells and cost_map for visualization
     else:
         return False, 0, 0, 0
-
 
 def grid1_coord2grid2_coord(coord, grid1, grid2):
     coord_grid = np.copy(coord)
@@ -147,13 +135,11 @@ def grid1_coord2grid2_coord(coord, grid1, grid2):
         coord_grid[1, :] = coord[1, :] * (grid2.shape[1] - 1) / (grid1.shape[1] - 1)
     return np.int32(np.rint(coord_grid))
 
-
-def find_rotation(dir_previous, dir_next):
+def find_rotation(dir_previous, dir_next): # How much the robot turns between dir_previous and dir_next
     det = dir_previous[0] * dir_next[1] - dir_previous[1] * dir_next[0]
     dot_product = dir_previous[0] * dir_next[0] + dir_previous[1] * dir_next[1]
-    theta = np.arctan2(det, dot_product)  # angle between the two directions [rad]
+    theta = np.arctan2(det, dot_product)  # Angle between the two directions [rad]
     return theta
-
 
 def find_keypoints(path):
 
@@ -165,27 +151,23 @@ def find_keypoints(path):
     counter = 1
 
     for i in range(STEP, len(path) - STEP, STEP):
-        previous = path[i - STEP]  # previous cell
-        current = path[i]  # current cell
-        next = path[i + STEP]  # next cell
+        previous = path[i - STEP] # Previous cell
+        current = path[i]         # Current cell
+        next = path[i + STEP]     # Next cell
 
-        # direction vectors
+        # Direction vectors
         dir_previous = (current[0] - previous[0], current[1] - previous[1])
         dir_next = (next[0] - current[0], next[1] - current[1])
 
-        if (abs(find_rotation(dir_previous, dir_next)) > ANGLE_THRESHOLD):  # significant change of direction
+        if (abs(find_rotation(dir_previous, dir_next)) > ANGLE_THRESHOLD):  # Significant change of direction
             keypoints.append(current)
-            # print("keypoint_angle : ", current)
             counter = 1
-        elif (counter >= COUNTER_THRESHOLD):  # ensures there isn't too much space between keypoints (so we avoid accumulating ignored small changes of directions)
+        elif (counter >= COUNTER_THRESHOLD):  # Ensures there isn't too much space between keypoints (so we avoid accumulating ignored small changes of directions)
             keypoints.append(current)
-            # print("keypoint_counter : ", current)
             counter = 1
         else:
             counter += 1
 
-    keypoints.append(
-        path[len(path) - 1]
-    )  # last point of the path is the true final goal
+    keypoints.append(path[len(path) - 1])  # Last point of the path is the true final goal
 
     return keypoints

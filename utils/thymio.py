@@ -3,11 +3,11 @@ import numpy as np
 import time
 
 THYMIO_ID = 9
-L_AXIS = 92                    #wheel axis length [mm]
-SPEED_SCALING_FACTOR = 1/0.38  #measured
+L_AXIS = 92                    # Wheel axis length [mm]
+SPEED_SCALING_FACTOR = 1/0.38  # Measured (experiments)
 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s, SPEED_SCALING_FACTOR = 1/0.4
-KIDNAPPING_THRESHOLD = 500     #for prox.ground.delta
-DISTANCE_THRESH = 60  #[mm]
+KIDNAPPING_THRESHOLD = 500     # For prox.ground.delta
+DISTANCE_THRESH = 60           #[mm]
  
 ########################
 # Thymio class
@@ -27,20 +27,10 @@ class Thymio_class:
         self.xytheta_meas_hist = np.empty((0, 3))
         self.xytheta_est_hist = np.empty((0, 3))
         # Kalman
-        """self.kalman_Q = np.diag([7.5, 7.5, np.deg2rad(5)]) ** 2
-        self.kalman_R = (
-            np.diag([5, 5, np.deg2rad(1)]) ** 2
-        )  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
-        self.kalman_H = np.eye(3)"""
-        
-        self.kalman_Q = np.diag([23, 23, 0.401])
-        self.kalman_R = (
-            np.diag([4, 4, np.deg2rad(2)])
-        )  # Measurement noise [0.0062, 0.0062, 0.0016] measureed in pix**2 (0.0586945)
+        self.kalman_R = (np.diag([4, 4, np.deg2rad(2)])) # Measurement noise
         self.kalman_H = np.eye(3)
         self.kalman_P =  self.kalman_R
         self.kalman_Q_ctrl=np.diag([31, 29])
-        # self.v_var=151 # (v_var=var_L+var_R)
 
     def Thymio_position_aruco(self, img):
 
@@ -55,14 +45,12 @@ class Thymio_class:
             _aruco_detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
             corners, ids, _ = _aruco_detector.detectMarkers(gray_img)
         else:
-            corners, ids, _ = cv2.aruco.detectMarkers(
-                gray_img, aruco_dict, parameters=parameters
-            )
+            corners, ids, _ = cv2.aruco.detectMarkers(gray_img, aruco_dict, parameters=parameters)
 
         if (ids is None) or (self.Thymio_ID not in ids):
             self.Thymio_detected = False
         else:
-            idx = np.where(ids == self.Thymio_ID)[0][0]  # Thymio's aruco ID is 9
+            idx = np.where(ids == self.Thymio_ID)[0][0] 
             aruco_corners = np.array(corners[idx][0, :, :])
 
             # Thymio's center:
@@ -74,7 +62,7 @@ class Thymio_class:
             angle = np.mean(
                 [
                     np.arctan2(bottom_edge[1], bottom_edge[0]),
-                    np.arctan2(top_edge[1], top_edge[0]),
+                    np.arctan2(top_edge[1], top_edge[0])
                 ]
             )
 
@@ -103,9 +91,8 @@ class Thymio_class:
         self.start_time = time.time()
 
     def kalman_predict_state(self, v_L, v_R):
-        """
-        Predict the next state
-        """
+
+        # Predict the next state
         self.xytheta_est[:2] = self.xytheta_est[:2] / self.pixbymm  # go in mm
 
         v_L = v_L / SPEED_SCALING_FACTOR  # go from pwm to mm/s
@@ -126,17 +113,15 @@ class Thymio_class:
         # Normalize angle to [-pi, pi]
         self.xytheta_est[2] = normalize_angle(self.xytheta_est[2])
 
-        """
-        Predict the next covariance matrix
-        """
+        # Predict the next covariance matrix
+        
         # Compute Jacobian and covariance matrix
-        G, Q = compute_G_Q(
+        G = compute_G(
             self.xytheta_est[2],
             v_L,
             v_R,
             L_AXIS,
-            self.delta_t,
-            self.kalman_Q,
+            self.delta_t
         )
 
         # Predict covariance
@@ -172,10 +157,8 @@ class Thymio_class:
         self.xytheta_est[:2] = self.xytheta_est[:2] * self.pixbymm  # go in pix
         self.xytheta_meas[:2] = self.xytheta_meas[:2] * self.pixbymm  # go in pix
 
-def compute_G_Q(theta, v_L, v_R, wheel_base, dt, process_cov):
-    """
-    Compute the Jacobian G and covariance matrix Q
-    """
+def compute_G(theta, v_L, v_R, wheel_base, dt): # Compute the Jacobian G
+    
     # Linear and angular velocities
     v = (v_R + v_L) / 2
     omega = (v_R - v_L) / wheel_base
@@ -189,17 +172,12 @@ def compute_G_Q(theta, v_L, v_R, wheel_base, dt, process_cov):
             [0, 0, 1],
         ]
     )
-    # Process cov
-    Q = process_cov * dt
 
-    return G, Q
+    return G
 
-def compute_Gu(theta, v_R, v_L, wheel_base, dt):
-    """
-    Compute the Jacobian Gu (derivative of motion equations w.r.t. control inputs)
-    """
+def compute_Gu(theta, v_R, v_L, wheel_base, dt): # Compute the Jacobian Gu (derivative of motion equations w.r.t. control inputs)
 
-    # Precompute common terms to be a bit faster :)
+    # Precompute common terms to be a bit faster 
     v = 0.5 * (v_L + v_R) 
     omega = (v_L - v_R) / wheel_base 
     theta_mid = theta + 0.5 * omega * dt  # Midpoint angle
@@ -222,13 +200,10 @@ def compute_Gu(theta, v_R, v_L, wheel_base, dt):
     G_u[2,1] = -dt / wheel_base
     return G_u
 
-
-
-
 async def gather_data(node):
     v_L = []
     v_R = []
-    for _ in range(10): #remove some variance
+    for _ in range(10): # Remove some variance
         await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
         v_L.append(node.v.motor.left.speed)
         v_R.append(node.v.motor.right.speed)
@@ -238,19 +213,13 @@ async def gather_data(node):
     return v_L, v_R
 
 async def check_kidnapping(node):
-    # await node.wait_for_variables({"acc"})
-    # if(abs(node.v.acc[2])<KIDNAPPING_THRESHOLD):
-    #     return True
-    # else:
-    #     return False
-    
     await node.wait_for_variables({"prox.ground.delta"})
     if(min(node.v.prox.ground.delta)<KIDNAPPING_THRESHOLD):
         return True
     else:
         return False
     
-def normalize_angle(angle): #restricts angle [rad] between -pi and pi
+def normalize_angle(angle): # Restricts angle [rad] between -pi and pi
     while angle > np.pi:
         angle -= 2 * np.pi
     while angle < -np.pi:
