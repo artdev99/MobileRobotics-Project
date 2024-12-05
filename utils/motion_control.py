@@ -1,6 +1,6 @@
 import numpy as np
 
-from thymio import L_AXIS, normalize_angle
+from utils.thymio import L_AXIS, normalize_angle
 
 OBSTACLE_THRESHOLD = 800
 SPEED = 150       #PWM
@@ -8,7 +8,7 @@ SPEED_LIMIT = 500 #PWM
 
 def motion_control(thymio):
 
-        k_alpha = 0.0085*SPEED  #controls rotational velocity 
+        k_alpha = 0.010*SPEED  #controls rotational velocity #85
         k_beta = 0      #damping term (to stabilize the robot's orientation when reaching the goal)
 
         x, y, theta, x_goal, y_goal = thymio.get_data_mm()
@@ -33,15 +33,13 @@ async def get_prox(node, client):
     return (list(node.v.prox.horizontal)[:-2])
 
 def check_obstacle(prox_values):
-    #await node.wait_for_variables({"acc"})
-    #if(abs(node.v.acc[2])<KIDNAPPING_THRESHOLD): #doesn't care about obstacles if being kidnapped
     if max(prox_values) > OBSTACLE_THRESHOLD :
         return True
     else :
         return False        
 
 def avoid_obstacle(prox_values): #left to right
-    braitenberg = [-10/300, -20/300, 30/300, 21/300, 11/300] #left to right
+    braitenberg = [-5/300, -20/300, 30/300, 21/300, 6/300] #left to right
     v_mr, v_ml = SPEED, SPEED
     for i in range (len(prox_values)) :
         v_ml -= braitenberg[i] * prox_values[i]

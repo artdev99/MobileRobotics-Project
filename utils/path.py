@@ -170,15 +170,11 @@ def find_keypoints(path):
         dir_previous = (current[0] - previous[0], current[1] - previous[1])
         dir_next = (next[0] - current[0], next[1] - current[1])
 
-        if (
-            abs(find_rotation(dir_previous, dir_next)) > ANGLE_THRESHOLD
-        ):  # significant change of direction
+        if (abs(find_rotation(dir_previous, dir_next)) > ANGLE_THRESHOLD):  # significant change of direction
             keypoints.append(current)
             # print("keypoint_angle : ", current)
             counter = 1
-        elif (
-            counter >= COUNTER_THRESHOLD
-        ):  # ensures there isn't too much space between keypoints (so we avoid accumulating ignored small changes of directions)
+        elif (counter >= COUNTER_THRESHOLD):  # ensures there isn't too much space between keypoints (so we avoid accumulating ignored small changes of directions)
             keypoints.append(current)
             # print("keypoint_counter : ", current)
             counter = 1
