@@ -237,38 +237,3 @@ def find_aruco_corners_size(image):
 
 
 
-
-def get_camera_url(login=None, password=None, ip=None):
-    if ip is None:
-        return None
-    if login is None or password is None:
-        return f"https://{ip}:8080/video"
-    return f"https://{login}:{password}@{ip}:8080/video"
-
-def get_camera(camera_url=None, camera_index=1):
-    if camera_url: 
-        camera = cv2.VideoCapture(camera_url)
-    else:
-        camera = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
-    if not camera.isOpened():
-        camera.release()
-        raise IOError("Camera could not be opened")
-    return camera
-
-def load_thresholds(filename):
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    if os.path.basename(script_dir) == "utils":
-        filepath = os.path.join(script_dir, filename)
-    else:
-        filepath = os.path.join(script_dir, "utils", filename)
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Threshold file not found: {filepath}")
-    with open(filepath, 'r') as f:
-        content = f.read().strip()
-        content = content[1:-1] # remove {}
-        lower_t, upper_t = content.split("), (", 3) 
-        lower_t = lower_t[1:].split(", ")
-        lower_t = tuple(map(int, lower_t))
-        upper_t = upper_t[:-1].split(", ")
-        upper_t = tuple(map(int, upper_t))
-        return np.array(lower_t + upper_t) # (6,)
