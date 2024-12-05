@@ -1,21 +1,20 @@
 import numpy as np
 import cv2
 from skimage import measure
+
+CAMERA_INDEX = 1 #0 if no webcam
+CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
+CORNER_ARUCO_SIZE = 65          #[mm]
+MIN_SIZE = 500 #minimum blob size
+
 ########################
 # Camera
 ########################
-class camera_class:
-    def __init__(
-        self,
-        camera_index=1,
-        corner_aruco_id=[0, 1, 2, 10],
-        corner_aruco_size=66,
-        min_size=5000,
-        thresh_obstacle=np.array([0, 0, 120, 0, 0, 140]),
-        thresh_goal=np.array([0, 120, 0, 0, 140, 0]),
-    ):
 
-        self.cam = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+class camera_class:
+    def __init__(self, thresh_obstacle, thresh_goal):
+
+        self.cam = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
         if not self.cam.isOpened():
             self.cam.release()
             raise IOError("Camera could not be opened")
@@ -31,9 +30,9 @@ class camera_class:
         self.get_image(False)  # We get the image without distorsion correction
 
         # We correct the perspective and get the perspective matrices to not have to find the corners at each iteration
-        self.corner_aruco_id = corner_aruco_id
+        self.corner_aruco_id = CORNER_ARUCO_ID 
         self.correct_perspective_aruco(get_matrix=True)
-        self.pixbymm = self.size_aruco / corner_aruco_size
+        self.pixbymm = self.size_aruco / CORNER_ARUCO_SIZE
 
         if self.corners_found:
             # We get the image with expanded obstacles and all the contours
@@ -42,14 +41,12 @@ class camera_class:
                 self.obstacle_cnt,
                 self.obstacle_cnt_expnded,
                 self.goal_cnt,
-                self.goal_center,
+                self.goal_center
             ) = full_detection_cnt_centroid(
                 self.persp_image,
                 thresh_obstacle,
                 thresh_goal,
-                min_size,
-                self.size_aruco,
-                corner_aruco_size,
+                self.pixbymm
             )
         else:
             self.cam.release()
@@ -97,19 +94,17 @@ def full_detection_cnt_centroid(
     image: np.ndarray,
     thresh_obstacle,
     thresh_goal,
-    min_size,
-    corner_aruco_size_mm,
-    corner_aruco_size_pix,
+    pixbymm
 ) -> np.ndarray:
     thresholded_img = np.zeros_like(image)
     Thymio_radius_mm = 70  # mm
-    radius = 0.38 * Thymio_radius_mm * corner_aruco_size_pix / corner_aruco_size_mm
+    radius = Thymio_radius_mm * pixbymm
     # Find Obstacles
     obstacle_mask = 255 * np.ones(image.shape[:2], dtype=np.uint8)
     for i in range(thresh_obstacle.shape[0]):
         temp_mask = cv2.inRange(image, thresh_obstacle[i, :3], thresh_obstacle[i, 3:6])
         obstacle_mask = cv2.bitwise_and(obstacle_mask, temp_mask)
-    obstacle_mask = filter_small_blobs(obstacle_mask, min_size=min_size)
+    obstacle_mask = filter_small_blobs(obstacle_mask)
 
     obstacle_mask, obstacle_cnt = fill_holes(obstacle_mask)
 
@@ -146,8 +141,8 @@ def fill_holes(bool_mask: np.ndarray) -> np.ndarray:
     return filled_mask, contours
 
 
-def filter_small_blobs(red_mask: np.ndarray, min_size: int) -> np.ndarray:
-    if min_size == 1:
+def filter_small_blobs(red_mask: np.ndarray) -> np.ndarray:
+    if MIN_SIZE  == 1:
         return red_mask
     out_mask = np.zeros_like(red_mask)
     labels = measure.label(red_mask)
@@ -155,7 +150,7 @@ def filter_small_blobs(red_mask: np.ndarray, min_size: int) -> np.ndarray:
         if label == 0:
             continue
         component = labels == label
-        if np.sum(component) >= min_size:
+        if np.sum(component) >= MIN_SIZE :
             out_mask[component] = 255
     return out_mask
 

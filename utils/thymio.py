@@ -2,18 +2,20 @@ import cv2
 import numpy as np
 import time
 
+THYMIO_ID = 9
 L_AXIS = 92                    #wheel axis length [mm]
-SPEED_SCALING_FACTOR = 526/200 #Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s
+SPEED_SCALING_FACTOR = 1/0.38  #measured
+#Thymio cheat sheet : motors set at 500 -> translational velocity ≈ 200mm/s, SPEED_SCALING_FACTOR = 1/0.4
 KIDNAPPING_THRESHOLD = 800     #for prox.ground.delta
-        
+DISTANCE_THRESH = 60  #[mm]
+ 
 ########################
 # Thymio class
 ########################
 class Thymio_class:
-    def __init__(self, Thymio_id, cam):
+    def __init__(self, cam):
 
-        self.Thymio_ID = Thymio_id
-        self.Thymio_ID = Thymio_id
+        self.Thymio_ID = THYMIO_ID
         self.Thymio_position_aruco(cam.persp_image)
         self.pixbymm = cam.pixbymm
         self.xytheta_est = self.xytheta_meas
@@ -80,12 +82,12 @@ class Thymio_class:
         y_goal_mm=((self.target_keypoint.flatten())[1])/self.pixbymm
         return x_mm, y_mm, theta_rad, x_goal_mm, y_goal_mm
     
-    def distance_to_goal(self):
+    def reached_goal(self):
         x, y, _, x_goal, y_goal = self.get_data_mm()
         delta_x = x_goal - x #[mm]
         delta_y = y_goal - y #[mm]
         distance_to_goal = np.sqrt( (delta_x)**2 + (delta_y)**2 ) #[mm]
-        return distance_to_goal
+        return (distance_to_goal < DISTANCE_THRESH)
     
 # Kalman
 

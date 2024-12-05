@@ -11,19 +11,10 @@ from utils.color_thresholds import load_thresholds
 ###########################################################
 # Parameters
 ###########################################################
-CAMERA_INDEX = 1 #0 if no webcam
-CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
-CORNER_ARUCO_SIZE = 65          #[mm]
-MIN_SIZE = 500 #minimum blob size
 COLOR_OBSTACLE = np.array([[80, 40, 0, 255, 70, 20]]) #BGR
 COLOR_GOAL = np.array([0, 77, 0, 68, 255, 118])         #BGR
 #COLOR_OBSTACLE = load_thresholds("color_obstacles.txt").reshape(1,-1) # run the notebook inside utils and save thresholds
 #COLOR_GOAL = load_thresholds("color_goal.txt")
-THYMIO_ID = 9
-GRID_L = 400  # [pixels]
-GRID_W = 300  # [pixels]
-DISTANCE_THRESH = 60  # [mm]
-deltqthist=[]
 ###########################################################
 # Main Code
 ###########################################################
@@ -52,27 +43,13 @@ async def main():
     await node.run()
     
     # Camera initialization
-    cam = camera_class(
-        CAMERA_INDEX,
-        CORNER_ARUCO_ID,
-        CORNER_ARUCO_SIZE,
-        MIN_SIZE,
-        COLOR_OBSTACLE,
-        COLOR_GOAL,
-    )
+    cam = camera_class(COLOR_OBSTACLE,COLOR_GOAL)
     while not cam.corners_found:
-        cam = camera_class(
-        CAMERA_INDEX,
-        CORNER_ARUCO_ID,
-        CORNER_ARUCO_SIZE,
-        MIN_SIZE,
-        COLOR_OBSTACLE,
-        COLOR_GOAL,
-    )
+        cam = camera_class(COLOR_OBSTACLE, COLOR_GOAL)
 
 
     # Thymio initialization
-    Thymio = Thymio_class(THYMIO_ID, cam)
+    Thymio = Thymio_class(cam)
 
     path_planning = True
     local_avoidance = False
@@ -91,7 +68,6 @@ async def main():
         # Thymio Position and motor
         Thymio.Thymio_position_aruco(cam.persp_image)
         Thymio.delta_time_update()
-        deltqthist.append(Thymio.delta_t)
         #print(f"Time for the loop:{Thymio.delta_t}")
 
         #Kalman Filter
@@ -126,7 +102,7 @@ async def main():
         if path_planning:
             if Thymio.target_keypoint is None or not np.any(Thymio.target_keypoint):
                 do_plot = True
-            grid = discretize_image_eff(cam.thresholded_image, GRID_L, GRID_W)
+            grid = discretize_image_eff(cam.thresholded_image)
             # Careful! Image frame's first coord (x) is pointing right but in a matrix the first coordinate (rows) is pointing down so they must be inverted
             found, path, _, _ = a_star_search(
                 grid,
@@ -187,11 +163,9 @@ async def main():
         #Motion control    
             else:
                 if((step % 5) == 0):
-                    #print("distance to keypoint: ", distance_to_goal(cam.pixbymm))
-                    if((Thymio.distance_to_goal()) < DISTANCE_THRESH):
+                    if(Thymio.reached_goal()):
                         if(len(Thymio.keypoints) <= 1): #Thymio found the goal
                             print("Mission accomplished") 
-                            #print(f"mean delta t:{np.mean(deltqthist)}")
                             aw(node.stop())
                             aw(node.unlock())
                             draw_history(cam, Thymio, path_img, keypoints)
