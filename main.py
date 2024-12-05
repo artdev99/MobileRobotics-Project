@@ -1,12 +1,12 @@
 import numpy as np
 import cv2
 from tdmclient import ClientAsync, aw
-from camera import *
-from thymio import *
-from path import *
-from motion_control import *
-from buttons import*
-from drawings import *
+from utils.camera import *
+from utils.thymio import *
+from utils.path import *
+from utils.motion_control import *
+from utils.buttons import*
+from utils.drawings import *
 
 ###########################################################
 # Parameters
@@ -44,6 +44,15 @@ async def main():
         time.sleep(0.3)
     cv2.destroyAllWindows()
     print("Starting the program")
+
+    program = '''
+        # Turn off LEDs during initialization
+        call leds.temperature(0, 0)
+        call leds.prox.h(0, 0, 0, 0, 0, 0, 0, 0)
+        call leds.prox.v(0, 0)
+        '''
+    await node.compile(program)
+    await node.run()
 
     # Camera initialization
     cam = camera_class(

@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 from skimage import measure
-
+import os
 ########################
 # Camera
 ########################
@@ -256,7 +256,14 @@ def get_camera(camera_url=None, camera_index=1):
     return camera
 
 def load_thresholds(filename):
-    with open(filename, 'r') as f:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if os.path.basename(script_dir) == "utils":
+        filepath = os.path.join(script_dir, filename)
+    else:
+        filepath = os.path.join(script_dir, "utils", filename)
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Threshold file not found: {filepath}")
+    with open(filepath, 'r') as f:
         content = f.read().strip()
         content = content[1:-1] # remove {}
         lower_t, upper_t = content.split("), (", 3) 
