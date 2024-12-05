@@ -16,9 +16,9 @@ CORNER_ARUCO_ID = [0, 1, 2, 10] #top-left, bottom-left, bottom-right, top-right
 CORNER_ARUCO_SIZE = 65          #[mm]
 MIN_SIZE = 500 #minimum blob size
 #COLOR_OBSTACLE = np.array([[30,30,90,130,100,255]]) #BGR
-COLOR_OBSTACLE = np.array([[110,70,0,255,100,20]]) #BGR
+#COLOR_OBSTACLE = np.array([[110,70,0,255,100,20]]) #BGR
 COLOR_GOAL = np.array([30,90,60,80,255,90])        #BGR
-# COLOR_OBSTACLE = load_thresholds("color_obstacles.txt")
+COLOR_OBSTACLE = load_thresholds("color_obstacles.txt") # run the notebook inside utils and save thresholds
 # COLOR_GOAL = load_thresholds("color_goal.txt")
 THYMIO_ID = 9
 GRID_L = 400  # [pixels]
@@ -54,7 +54,7 @@ async def main():
         '''
     await node.compile(program)
     await node.run()
-
+    
     # Camera initialization
     cam = camera_class(
         CAMERA_INDEX,

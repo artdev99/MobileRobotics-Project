@@ -1,6 +1,6 @@
 import numpy as np
 
-from thymio import L_AXIS, normalize_angle
+from utils.thymio import L_AXIS, normalize_angle
 
 OBSTACLE_THRESHOLD = 800
 SPEED = 150       #PWM
@@ -33,8 +33,6 @@ async def get_prox(node, client):
     return (list(node.v.prox.horizontal)[:-2])
 
 def check_obstacle(prox_values):
-    #await node.wait_for_variables({"acc"})
-    #if(abs(node.v.acc[2])<KIDNAPPING_THRESHOLD): #doesn't care about obstacles if being kidnapped
     if max(prox_values) > OBSTACLE_THRESHOLD :
         return True
     else :
